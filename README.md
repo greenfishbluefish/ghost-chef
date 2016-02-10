@@ -3,5 +3,5 @@ This is a junkdrawer of idempotent AWS functionality. It needs to be organized a
 # require the gem with bundler
 
 ```
-gem 'aws-idempotency', '0.0.0', :git => 'git://github.com/cyanna/aws-idempotency.git'
+gem 'aws-idempotency', '0.0.0', :git => 'git@github.com:cyanna/aws-idempotency.git'
 ```
