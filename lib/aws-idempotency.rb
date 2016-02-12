@@ -34,6 +34,10 @@ class Clients
   def self.rds
     @@rds ||= Aws::RDS::Client.new
   end
+
+  def self.sns
+    @@sns ||= Aws::SNS::Client.new
+  end
 end
 
 def tags(override={})
@@ -54,6 +58,21 @@ def tags_from_hash(tags)
   tags.to_a.map {|v|
     { key: v[0].to_s, value: v[1] }
   }
+end
+
+# This method is used for those calls that don't provide their own filtering.
+def filter(client, method, args, key, &filter)
+  resp = client.send(method.to_sym, **args)
+  items = resp.send(key.to_sym).select(&filter)
+  while resp.next_token
+    resp = client.send(method.to_sym, **args.merge(next_token: resp.next_token))
+    items.concat!(resp.send(key.to_sym).select(&filter))
+  end
+  items
+end
+
+def retrieve_all(client, method, args, key)
+  filter(client, method, args, key) { true }
 end
 
 def rules_from_hash(rules)
@@ -487,6 +506,7 @@ def retrieve_auto_scaling_groups(options)
       auto_scaling_group_names: [options[:name]]
     ).auto_scaling_groups[0]
   else
+    # XXX: Convert this to use filter() above.
     # describe_auto_scaling_groups() does not provide a filtering mechanism, so
     # provide our own.
     resp = Clients.asg.describe_auto_scaling_groups(max_records: 100)
@@ -585,6 +605,47 @@ def destroy_auto_scaling_group(asg)
   destroy_ami(retrieve_ami(image_id))
 end
 
+def retrieve_topic(name)
+  filter(Clients.sns, :list_topics, {}, :topics) do |item|
+    item.topic_arn.match(/:#{name}$/)
+  end.first
+end
+def ensure_topic(name)
+  topic = retrieve_topic(name)
+  unless topic
+    Clients.sns.create_topic(name: name)
+    topic = retrieve_topic(name)
+  end
+  topic
+end
+
+def retrieve_subscription(topic, endpoint, protocol='https')
+  filter(
+    Clients.sns,
+    :list_subscriptions_by_topic,
+    {topic_arn: topic.topic_arn},
+    :subscriptions,
+  ) do |s|
+    s.endpoint == endpoint && s.protocol == protocol
+  end.first
+end
+def ensure_topic_subscription(topic, endpoint, protocol='https')
+  subscription = retrieve_subscription(topic, endpoint, protocol)
+  unless subscription
+    Clients.sns.subscribe(
+      topic_arn: topic.topic_arn,
+      protocol: protocol,
+      endpoint: endpoint,
+    )
+    subscription = retrieve_subscription(name, endpoint, protocol)
+
+    # Need to block until the subscription has been confirmed.
+    # or throw an error after a specific amount of time.
+  end
+
+  subscription
+end
+
 class CloudWatch
   def self.metrics
     {
@@ -650,15 +711,14 @@ def ensure_alarm(params)
 
     # FIXME: Confirm this is 1-5 inclusive
     periods: 2,
-
-    action: cloudwatch_actions['PagerDuty'],
   }.merge(params)
 
   # TODO: Verify we received the following:
-  # :type
   # :name
+  # :type
   # :metric
   # :threshold
+  # :action
 
   # Convert these client calls to the methods provided above.
   case opts[:type]
