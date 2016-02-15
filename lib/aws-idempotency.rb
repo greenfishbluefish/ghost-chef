@@ -1,4 +1,3 @@
-gem 'aws-sdk', '~>2.1'
 require 'aws-sdk'
 
 Aws.config.update({
