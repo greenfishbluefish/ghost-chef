@@ -844,22 +844,3 @@ def ensure_alarm(params)
 
   # Verify the alarm goes into OK.
 end
-
-class ElasticSearch
-
-  @@client ||= Aws::ElasticsearchService::Client.new
-
-  def self.ensure(domain_name, opts = {})
-    es_domain = @@client.describe_elasticsearch_domain_config({
-        domain_name: domain_name,
-      })
-
-    unless es_domain 
-      opts = opts.merge(domain_name: domain_name)
-      es_domain = @@client.create_elasticsearch_domain(opts)
-    end
-
-    es_domain
-  end
-
-end
