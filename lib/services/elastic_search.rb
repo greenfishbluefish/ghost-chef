@@ -22,18 +22,11 @@ class ElasticSearch
 
     @@client.create_elasticsearch_domain(opts)
 
-    puts "Elasticsearch domain created."
     self.retrieve(domain_name)
   end
 
   def self.ensure(domain_name, opts = {})
-    es_domain = self.retrieve(domain_name)
-    
-    if es_domain
-      puts "Elasticsearch domain #{domain_name} already created"
-    else
-      es_domain = self.create(domain_name, opts = {})
-    end
+    self.retrieve(domain_name) || self.create(domain_name, opts)
   end
 
   def self.ensure_endpoint_available(domain_name)
