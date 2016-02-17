@@ -5,16 +5,14 @@ class ElasticSearch
   @@client ||= Aws::ElasticsearchService::Client.new
 
   def self.retrieve(domain_name)
-    es_domain = @@client.describe_elasticsearch_domain({
-        domain_name: domain_name,
-      })
+    es_domain = @@client.describe_elasticsearch_domain(domain_name: domain_name)
 
     #TODO: what to do in this case? 
     raise "This domain is currently being deleted" if es_domain.domain_status.deleted
 
     es_domain
-    rescue Aws::ElasticsearchService::Errors::ResourceNotFoundException
-      false
+  rescue Aws::ElasticsearchService::Errors::ResourceNotFoundException
+    false
   end
 
   def self.create(domain_name, opts = {})
