@@ -7,3 +7,4 @@ Aws.config.update({
 require_relative 'services/junk_drawer.rb'
 require_relative 'services/elastic_search.rb'
 require_relative 'services/s3.rb'
+require_relative 'services/dns.rb'
