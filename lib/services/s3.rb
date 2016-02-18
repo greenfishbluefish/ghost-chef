@@ -20,4 +20,33 @@ class S3
     end
     true
   end
+
+  def self.enable_website(name, opts={})
+    config = {}
+
+    if opts[:error]
+      config[:error_document] = { key: opts[:error] }
+    end
+    if opts[:index]
+      config[:index_document] = { suffix: opts[:index] }
+    end
+
+    @@client.put_bucket_website(
+      bucket: name,
+      website_configuration: config,
+    )
+  end
+
+  def self.upload(name, opts={})
+    raise "Must provide filename to S3.upload()" unless opts[:filename]
+
+    @@client.put_object(
+      bucket: name,
+      key: opts[:filename],
+      body: opts[:contents] || '',
+      acl: opts[:acl] || 'public-read',
+    )
+
+    true
+  end
 end
