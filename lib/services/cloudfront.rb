@@ -23,11 +23,17 @@ class Cloudfront
   end
 
   def self.ensure_distribution_for_s3(bucket, opts={})
-    distro = find_distribution_for_domain(bucket)
+    distro = find_distribution_for_domain("#{bucket}.s3.amazonaws.com")
     unless distro
+      opts[:aliases] ||= []
+
       distro = @@client.create_distribution(
         distribution_config: {
           caller_reference: bucket,
+          aliases: {
+            quantity: opts[:aliases].length,
+            items: opts[:aliases],
+          },
           default_root_object: 'index.html',
           origins: {
             quantity: 1,
