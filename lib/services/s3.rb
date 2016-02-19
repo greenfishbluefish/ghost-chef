@@ -24,11 +24,14 @@ class S3
   def self.enable_website(name, opts={})
     config = {}
 
-    if opts[:error]
-      config[:error_document] = { key: opts[:error] }
-    end
     if opts[:index]
       config[:index_document] = { suffix: opts[:index] }
+    else
+      config[:index_document] = { suffix: 'index.html' }
+    end
+
+    if opts[:error]
+      config[:error_document] = { key: opts[:error] }
     end
 
     @@client.put_bucket_website(

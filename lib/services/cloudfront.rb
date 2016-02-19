@@ -27,6 +27,21 @@ class Cloudfront
     unless distro
       opts[:aliases] ||= []
 
+      ssl_options = {
+        cloud_front_default_certificate: false,
+      }
+      protocol_policy = 'allow-all'
+      if opts[:acm_ssl]
+        ssl_options = {
+          cloud_front_default_certificate: false,
+          acm_certificate_arn: opts[:acm_ssl].certificate_arn,
+          certificate_source: 'acm',
+        }
+        protocol_policy = 'redirect-to-https'
+      end
+      ssl_options[:ssl_support_method] = 'sni-only'
+      ssl_options[:minimum_protocol_version] = 'TLSv1'
+
       distro = @@client.create_distribution(
         distribution_config: {
           caller_reference: bucket,
@@ -55,24 +70,31 @@ class Cloudfront
               enabled: false,
               quantity: 0,
             },
-            viewer_protocol_policy: 'allow-all',
-            min_ttl: 300,
+            viewer_protocol_policy: protocol_policy,
+            min_ttl: 60,
+            max_ttl: 300,
+            default_ttl: 60,
           },
           cache_behaviors: { quantity: 0 },
-          comment: bucket,
+          comment: "Distribution for #{bucket}",
           logging: {
             enabled: false,
             include_cookies: false,
             bucket: '',
             prefix: '',
           },
+          viewer_certificate: ssl_options,
           enabled: true,
         }
       ).distribution
-
-      puts "Waiting for distribution to be deployed ..."
-      @@client.wait_until(:distribution_deployed, id: distro.id)
     end
     distro
+  end
+
+  def self.waitfor_distribution_deployed(distro)
+    puts "Waiting for distribution to be deployed ..."
+    puts "\t(This can take up to 20 minutes.)"
+
+    @@client.wait_until(:distribution_deployed, id: distro.id)
   end
 end
