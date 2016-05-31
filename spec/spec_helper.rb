@@ -1,3 +1,12 @@
+# Because the clients are created eagerly (upon class load), we have to set the
+# AWS SDK to stubbed before we load aws-idempotency.
+require 'aws-sdk'
+Aws.config.update({
+  stub_responses: true,
+})
+
+require 'aws-idempotency'
+
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true
