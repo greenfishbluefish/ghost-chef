@@ -1,3 +1,11 @@
+require 'simplecov'
+SimpleCov.start do
+  add_filter '/spec/'
+  minimum_coverage 23
+  minimum_coverage_by_file 18
+  refuse_coverage_drop
+end
+
 # Because the clients are created eagerly (upon class load), we have to set the
 # AWS SDK to stubbed before we load aws-idempotency.
 require 'aws-sdk'
