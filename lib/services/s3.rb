@@ -38,6 +38,7 @@ class S3
       bucket: name,
       website_configuration: config,
     )
+    true
   end
 
   def self.upload(name, opts={})
