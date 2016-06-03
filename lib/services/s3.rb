@@ -15,7 +15,8 @@ class S3
     unless self.bucket_exists(name)
       @@client.create_bucket(
         bucket: name,
-        acl: opts[:acl] || 'public-read',
+        # ACL: private, public-read, public-read-write, authenticated-read
+        acl: opts[:acl] || 'private',
       )
     end
     true
@@ -48,7 +49,7 @@ class S3
       bucket: name,
       key: opts[:filename],
       body: opts[:contents] || '',
-      acl: opts[:acl] || 'public-read',
+      acl: opts[:acl] || 'private',
     )
 
     true

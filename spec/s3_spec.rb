@@ -58,7 +58,7 @@ describe S3 do
           bucket: 'bucket',
           key: 'foo',
           body: '',
-          acl: 'public-read',
+          acl: 'private',
         ).and_call_original
 
       expect(
@@ -72,7 +72,7 @@ describe S3 do
           bucket: 'bucket',
           key: 'foo',
           body: 'abcd',
-          acl: 'public-read',
+          acl: 'private',
         ).and_call_original
 
       expect(
@@ -86,11 +86,11 @@ describe S3 do
           bucket: 'bucket',
           key: 'foo',
           body: 'abcd',
-          acl: 'public-write',
+          acl: 'public-read',
         ).and_call_original
 
       expect(
-        S3.upload('bucket', filename: 'foo', contents: 'abcd', acl: 'public-write')
+        S3.upload('bucket', filename: 'foo', contents: 'abcd', acl: 'public-read')
       ).to be true
     end
   end
