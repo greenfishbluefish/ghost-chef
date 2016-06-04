@@ -42,12 +42,10 @@ class S3
     true
   end
 
-  def self.upload(name, opts={})
-    raise "Must provide filename to S3.upload()" unless opts[:filename]
-
+  def self.upload(name, filename, opts={})
     @@client.put_object(
       bucket: name,
-      key: opts[:filename],
+      key: filename,
       body: opts[:contents] || '',
       acl: opts[:acl] || 'private',
     )

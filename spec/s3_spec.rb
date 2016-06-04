@@ -46,12 +46,6 @@ describe S3 do
   end
 
   describe '#upload' do
-    it 'throws an error without a filename' do
-      expect {
-        S3.upload('bucket')
-      }.to raise_error "Must provide filename to S3.upload()"
-    end
-
     it 'returns true with a empty file' do
       expect(client).to receive(:put_object)
         .with(
@@ -62,7 +56,7 @@ describe S3 do
         ).and_call_original
 
       expect(
-        S3.upload('bucket', filename: 'foo')
+        S3.upload('bucket', 'foo')
       ).to be true
     end
 
@@ -76,7 +70,7 @@ describe S3 do
         ).and_call_original
 
       expect(
-        S3.upload('bucket', filename: 'foo', contents: 'abcd')
+        S3.upload('bucket', 'foo', contents: 'abcd')
       ).to be true
     end
 
@@ -90,7 +84,7 @@ describe S3 do
         ).and_call_original
 
       expect(
-        S3.upload('bucket', filename: 'foo', contents: 'abcd', acl: 'public-read')
+        S3.upload('bucket', 'foo', contents: 'abcd', acl: 'public-read')
       ).to be true
     end
   end
