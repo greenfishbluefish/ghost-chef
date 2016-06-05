@@ -15,7 +15,8 @@ class S3
     unless self.bucket_exists(name)
       @@client.create_bucket(
         bucket: name,
-        acl: opts[:acl] || 'public-read',
+        # ACL: private, public-read, public-read-write, authenticated-read
+        acl: opts[:acl] || 'private',
       )
     end
     true
@@ -38,16 +39,15 @@ class S3
       bucket: name,
       website_configuration: config,
     )
+    true
   end
 
-  def self.upload(name, opts={})
-    raise "Must provide filename to S3.upload()" unless opts[:filename]
-
+  def self.upload(name, filename, opts={})
     @@client.put_object(
       bucket: name,
-      key: opts[:filename],
+      key: filename,
       body: opts[:contents] || '',
-      acl: opts[:acl] || 'public-read',
+      acl: opts[:acl] || 'private',
     )
 
     true
