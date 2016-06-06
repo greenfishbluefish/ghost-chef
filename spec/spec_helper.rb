@@ -1,7 +1,7 @@
 require 'simplecov'
 SimpleCov.start do
   add_filter '/spec/'
-  minimum_coverage 26
+  minimum_coverage 30
   minimum_coverage_by_file 18
   refuse_coverage_drop
 end
