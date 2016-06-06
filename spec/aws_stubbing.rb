@@ -13,7 +13,6 @@ module AwsStubs
   #   [ :method2, <params2>, <response2> ]
   #   [ :method1, <params3>, <response3> ]
   # ]
-  # TODO: Validate the parameters provided (middle parameter in slice).
 	def stub_calls(*expectations)
     requests = {}
     expectations.each do |slice|
