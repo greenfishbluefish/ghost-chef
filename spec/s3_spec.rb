@@ -53,7 +53,7 @@ describe S3 do
           key: 'foo',
           body: '',
           acl: 'private',
-				}, {}],
+        }, {}],
       )
 
       expect(
@@ -68,7 +68,7 @@ describe S3 do
           key: 'foo',
           body: 'abcd',
           acl: 'private',
-				}, {}],
+        }, {}],
       )
 
       expect(
@@ -83,7 +83,7 @@ describe S3 do
           key: 'foo',
           body: 'abcd',
           acl: 'public-read',
-				}, {}],
+        }, {}],
       )
 
       expect(
@@ -100,7 +100,7 @@ describe S3 do
           website_configuration: {
             index_document: { suffix: 'index.html' },
           },
-				}, {}],
+        }, {}],
       )
       expect(S3.enable_website('bucket')).to be true
     end
@@ -112,7 +112,7 @@ describe S3 do
           website_configuration: {
             index_document: { suffix: 'index.htm' },
           },
-				}, {}],
+        }, {}],
       )
       expect(S3.enable_website('bucket', index: 'index.htm')).to be true
     end
@@ -125,7 +125,7 @@ describe S3 do
             index_document: { suffix: 'index.html' },
             error_document: { key: 'error.html' },
           },
-				}, {}],
+        }, {}],
       )
       expect(S3.enable_website('bucket', error: 'error.html')).to be true
     end

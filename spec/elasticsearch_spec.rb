@@ -7,15 +7,15 @@ describe ElasticSearch do
   end
   def build_response(opts={})
     {
-			domain_status: {
-				domain_id: 'abcd',
-				domain_name: domain,
-				arn: 'efgh',
-				elasticsearch_cluster_config: {
-					instance_type: 'm3.medium.elasticsearch',
-					instance_count: 1,
-				},
-			}.merge(opts),
+      domain_status: {
+        domain_id: 'abcd',
+        domain_name: domain,
+        arn: 'efgh',
+        elasticsearch_cluster_config: {
+          instance_type: 'm3.medium.elasticsearch',
+          instance_count: 1,
+        },
+      }.merge(opts),
     }
   end
 
@@ -53,24 +53,24 @@ describe ElasticSearch do
   end
 
   describe '#create' do
-		before { stub_calls(create_new, retrieve_found) }
-		it "returns the domain" do
-			expect(ElasticSearch.create(domain)).to be_truthy
-		end
+    before { stub_calls(create_new, retrieve_found) }
+    it "returns the domain" do
+      expect(ElasticSearch.create(domain)).to be_truthy
+    end
   end
 
   describe '#ensure' do
     context 'when it already exists' do
       before { stub_calls(retrieve_found) }
-			it "returns the domain" do
-				expect(ElasticSearch.ensure(domain)).to be_truthy
-			end
+      it "returns the domain" do
+        expect(ElasticSearch.ensure(domain)).to be_truthy
+      end
     end
     context "when it doesn't already exist" do
       before { stub_calls(retrieve_not_found, create_new, retrieve_found) }
-			it "returns the domain" do
-				expect(ElasticSearch.ensure(domain)).to be_truthy
-			end
+      it "returns the domain" do
+        expect(ElasticSearch.ensure(domain)).to be_truthy
+      end
     end
   end
 
@@ -146,14 +146,14 @@ describe ElasticSearch do
   describe '#ensure_endpoint_available' do
     sleeping_msg = "Elasticsearch domain is still processing...\n"
     context "it exists with an endpoint" do
-			before {
+      before {
         allow(ElasticSearch).to receive(:sleep).with(30).exactly(0).times
       }
       before { stub_calls(
-				retrieve_found(processing: false),
+        retrieve_found(processing: false),
         retrieve_found(endpoint: 'foo.bar.com'),
         retrieve_found(endpoint: 'foo.bar.com'),
-			) }
+      ) }
       it "returns the endpoint" do
         expect(ElasticSearch.ensure_endpoint_available(domain)).to eql 'foo.bar.com'
       end
@@ -161,14 +161,15 @@ describe ElasticSearch do
 
     context "it exists without an endpoint, then with an endpoint" do
       before { stub_calls(
-				retrieve_found(processing: false),
-				retrieve_found,
-				retrieve_found(processing: false),
+        retrieve_found(processing: false),
+        retrieve_found(endpoint: nil),
+        # Sleep here
+        retrieve_found(processing: false),
         retrieve_found(endpoint: 'foo.bar.com'),
         retrieve_found(endpoint: 'foo.bar.com'),
-			) }
+      ) }
       it "returns the endpoint" do
-				expect(ElasticSearch).to receive(:sleep).with(30).exactly(1).times
+        expect(ElasticSearch).to receive(:sleep).with(30).exactly(1).times
         expect{
           expect(ElasticSearch.ensure_endpoint_available(domain)).to eql 'foo.bar.com'
         }.to output(sleeping_msg).to_stdout
@@ -177,15 +178,17 @@ describe ElasticSearch do
 
     context "it is still processing, then it exists without an endpoint, then with an endpoint" do
       before { stub_calls(
-				retrieve_found(processing: true),
-				retrieve_found(processing: false),
-				retrieve_found,
-				retrieve_found(processing: false),
+        retrieve_found(processing: true),
+        # Sleep here
+        retrieve_found(processing: false),
+        retrieve_found(endpoint: nil),
+        # Sleep here
+        retrieve_found(processing: false),
         retrieve_found(endpoint: 'foo.bar.com'),
         retrieve_found(endpoint: 'foo.bar.com'),
-			) }
+      ) }
       it "returns the endpoint" do
-				expect(ElasticSearch).to receive(:sleep).with(30).exactly(2).times
+        expect(ElasticSearch).to receive(:sleep).with(30).exactly(2).times
         expect{
           expect(ElasticSearch.ensure_endpoint_available(domain)).to eql 'foo.bar.com'
         }.to output(sleeping_msg + sleeping_msg).to_stdout
