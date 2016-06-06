@@ -32,9 +32,6 @@ module AwsStubs
 
 		requests.each do |method, responses|
 			client.stub_responses(method, responses)
-#      expect(client).to receive(method)
-#        .exactly(responses.size).times
-#        .and_call_original
 		end
 	end
 end
