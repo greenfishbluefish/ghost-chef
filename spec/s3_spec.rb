@@ -3,19 +3,19 @@ describe S3 do
 
   describe '#bucket_exists' do
     context 'finds the bucket' do
-      before(:each) { client.stub_responses(:head_bucket, {}) }
+      before { stub_calls([:head_bucket, {bucket: 'bucket'}, {}]) }
       it { expect(S3.bucket_exists('bucket')).to be true }
     end
     context 'finds no bucket' do
-      before(:each) { client.stub_responses(:head_bucket, 'NotFound') }
+      before { stub_calls([:head_bucket, {bucket: 'bucket'}, 'NotFound']) }
       it { expect(S3.bucket_exists('bucket')).to be false }
     end
     context 'cannot see the bucket' do
-      before(:each) { client.stub_responses(:head_bucket, 'Forbidden') }
+      before { stub_calls([:head_bucket, {bucket: 'bucket'}, 'Forbidden']) }
       it { expect(S3.bucket_exists('bucket')).to be false }
     end
     context 'times out' do
-      before(:each) { client.stub_responses(:head_bucket, 'TimedOut') }
+      before { stub_calls([:head_bucket, {bucket: 'bucket'}, 'TimedOut']) }
       it {
         expect {
           S3.bucket_exists('bucket')
@@ -26,34 +26,35 @@ describe S3 do
 
   describe '#ensure_bucket' do
     context 'bucket exists' do
-      before(:each) { client.stub_responses(:head_bucket, {}) }
+      before { stub_calls([:head_bucket, {bucket: 'bucket'}, {}]) }
       it { expect(S3.ensure_bucket('bucket')).to be true }
     end
     context 'bucket does not exist' do
-      before(:each) {
-        client.stub_responses(:head_bucket, 'NotFound')
-        client.stub_responses(:create_bucket, {location: 'some-place'})
-      }
+      before { stub_calls(
+        [:head_bucket, {bucket: 'bucket'}, 'NotFound'],
+        [:create_bucket, {bucket: 'bucket', acl: 'private'}, {location: 'some-place'}],
+      ) }
       it { expect(S3.ensure_bucket('bucket')).to be true }
     end
     context 'cannot create a bucket' do
-      before(:each) {
-        client.stub_responses(:head_bucket, 'Forbidden')
-        client.stub_responses(:create_bucket, 'Forbidden')
-      }
+      before { stub_calls(
+        [:head_bucket, {bucket: 'bucket'}, 'NotFound'],
+        [:create_bucket, {bucket: 'bucket', acl: 'private'}, 'Forbidden'],
+      ) }
       it { expect{S3.ensure_bucket('bucket')}.to raise_error Aws::S3::Errors::Forbidden}
     end
   end
 
   describe '#upload' do
     it 'returns true with a empty file' do
-      expect(client).to receive(:put_object)
-        .with(
+      stub_calls(
+        [:put_object, {
           bucket: 'bucket',
           key: 'foo',
           body: '',
           acl: 'private',
-        ).and_call_original
+				}, {}],
+      )
 
       expect(
         S3.upload('bucket', 'foo')
@@ -61,13 +62,14 @@ describe S3 do
     end
 
     it 'returns true with a file that has content' do
-      expect(client).to receive(:put_object)
-        .with(
+      stub_calls(
+        [:put_object, {
           bucket: 'bucket',
           key: 'foo',
           body: 'abcd',
           acl: 'private',
-        ).and_call_original
+				}, {}],
+      )
 
       expect(
         S3.upload('bucket', 'foo', contents: 'abcd')
@@ -75,13 +77,14 @@ describe S3 do
     end
 
     it 'returns true with a file that has content and an ACL' do
-      expect(client).to receive(:put_object)
-        .with(
+      stub_calls(
+        [:put_object, {
           bucket: 'bucket',
           key: 'foo',
           body: 'abcd',
           acl: 'public-read',
-        ).and_call_original
+				}, {}],
+      )
 
       expect(
         S3.upload('bucket', 'foo', contents: 'abcd', acl: 'public-read')
@@ -90,38 +93,40 @@ describe S3 do
   end
 
   describe '#enable_website' do
-    before(:each) { client.stub_responses(:put_bucket_website, {}) }
     it 'with defaults' do
-      expect(client).to receive(:put_bucket_website)
-        .with(
+      stub_calls(
+        [:put_bucket_website, {
           bucket: 'bucket',
           website_configuration: {
             index_document: { suffix: 'index.html' },
           },
-        ).and_call_original
+				}, {}],
+      )
       expect(S3.enable_website('bucket')).to be true
     end
 
     it 'setting index document' do
-      expect(client).to receive(:put_bucket_website)
-        .with(
+      stub_calls(
+        [:put_bucket_website, {
           bucket: 'bucket',
           website_configuration: {
             index_document: { suffix: 'index.htm' },
           },
-        ).and_call_original
+				}, {}],
+      )
       expect(S3.enable_website('bucket', index: 'index.htm')).to be true
     end
 
     it 'setting error document' do
-      expect(client).to receive(:put_bucket_website)
-        .with(
+      stub_calls(
+        [:put_bucket_website, {
           bucket: 'bucket',
           website_configuration: {
             index_document: { suffix: 'index.html' },
             error_document: { key: 'error.html' },
           },
-        ).and_call_original
+				}, {}],
+      )
       expect(S3.enable_website('bucket', error: 'error.html')).to be true
     end
   end
