@@ -18,6 +18,61 @@ describe Route53 do
     }
   end
 
+  let(:lrr_call) { :list_resource_record_sets }
+  def lrr_request(name)
+    {
+      hosted_zone_id: 'abcd',
+      start_record_name: name,
+      max_items: 1,
+    }
+  end
+  def lrr_response(names)
+    {
+      is_truncated: false,
+      max_items: names.size,
+      resource_record_sets: names.map do |name|
+        { name: "#{name}.", type: 'A' }
+      end,
+    }
+  end
+
+  let(:hosted_zone_targets) {{
+    S3: 'Z3AQBSTGFYJSTF',
+    CloudFront: 'Z2FDTNDATAQYW2',
+  }}
+
+  let(:crr_call) { :change_resource_record_sets }
+  def crr_request(type, name, opts)
+    {
+      hosted_zone_id: 'abcd',
+      change_batch: {
+        comment: "Create DNS for #{type} #{name}",
+        changes: [
+          {
+            action: "CREATE",
+            resource_record_set: {
+              name: "#{name}.",
+              type: 'A',
+              alias_target: opts[:target].merge(
+                hosted_zone_id: hosted_zone_targets[type],
+              ),
+            },
+          },
+        ],
+      },
+    }
+  end
+  def crr_response(type, name)
+    {
+      change_info: {
+        id: 'abcd',
+        status: 'PENDING',
+        comment: "Create DNS for #{type} #{name}",
+        submitted_at: Time.now,
+      },
+    }
+  end
+
   context '#zone_for_name' do
     context 'with no zones found' do
       before {stub_calls(
@@ -43,11 +98,6 @@ describe Route53 do
     end
   end
 
-  hosted_zone_targets = {
-    S3: 'Z3AQBSTGFYJSTF',
-    CloudFront: 'Z2FDTNDATAQYW2',
-  }
-
   context '#ensure_dns_for_s3' do
     context 'with no zones found' do
       before {stub_calls(
@@ -65,83 +115,37 @@ describe Route53 do
 
       it 'returns a record already there for a root' do
         name = 'foo.com'
-        expect(client).to receive(:list_resource_record_sets)
-          .with(
-            hosted_zone_id: 'abcd',
-            start_record_name: name,
-            max_items: 1,
-          ).and_call_original
-
-        client.stub_responses(:list_resource_record_sets, {
-          is_truncated: false, max_items: 1,
-          resource_record_sets: [
-            { name: "#{name}.", type: 'A' },
-          ],
-        })
-
+        stub_calls(
+          [lrr_call, lrr_request(name), lrr_response([name])],
+        )
         expect(Route53.ensure_dns_for_s3(name)).to be true
       end
 
       it 'returns a record already there for a subdomain' do
         name = 'www.foo.com'
-        expect(client).to receive(:list_resource_record_sets)
-          .with(
-            hosted_zone_id: 'abcd',
-            start_record_name: name,
-            max_items: 1,
-          ).and_call_original
-
-        client.stub_responses(:list_resource_record_sets, {
-          is_truncated: false, max_items: 1,
-          resource_record_sets: [
-            { name: "#{name}.", type: 'A' },
-          ],
-        })
+        stub_calls(
+          [lrr_call, lrr_request(name), lrr_response([name])],
+        )
 
         expect(Route53.ensure_dns_for_s3(name)).to be true
       end
 
       it 'creates a record if needed' do
         name = 'www.foo.com'
+        stub_calls(
+          [lrr_call, lrr_request(name), lrr_response([])],
+          [
+            crr_call,
+            crr_request(
+              :S3, name, target: {
+                dns_name: 's3-website-us-east-1.amazonaws.com',
+                evaluate_target_health: true,
+              },
+            ),
+            crr_response(:CloudFront, name),
+          ],
+        )
 
-        expect(client).to receive(:list_resource_record_sets)
-          .with(
-            hosted_zone_id: 'abcd',
-            start_record_name: name,
-            max_items: 1,
-          ).and_call_original
-
-        client.stub_responses(:list_resource_record_sets, {
-          is_truncated: false, max_items: 1,
-          resource_record_sets: [],
-        })
-
-        expect(client).to receive(:change_resource_record_sets)
-          .with(
-            hosted_zone_id: 'abcd',
-            change_batch: {
-              comment: "Create DNS for S3 #{name}",
-              changes: [
-                {
-                  action: "CREATE",
-                  resource_record_set: {
-                    name: "#{name}.",
-                    type: 'A',
-                    alias_target: {
-                      hosted_zone_id: hosted_zone_targets[:S3],
-                      dns_name: 's3-website-us-east-1.amazonaws.com',
-                      evaluate_target_health: true,
-                    },
-                  },
-                },
-              ],
-            },
-          ).and_call_original
-
-        client.stub_responses(:change_resource_record_sets, { change_info: {
-          id: 'abcd', status: 'PENDING', comment: "Create DNS for S3 #{name}",
-          submitted_at: Time.now,
-        }})
         expect(Route53.ensure_dns_for_s3(name)).to be true
       end
     end
@@ -167,83 +171,38 @@ describe Route53 do
 
       it 'returns a record already there for a root' do
         name = 'foo.com'
-        expect(client).to receive(:list_resource_record_sets)
-          .with(
-            hosted_zone_id: 'abcd',
-            start_record_name: name,
-            max_items: 1,
-          ).and_call_original
-
-        client.stub_responses(:list_resource_record_sets, {
-          is_truncated: false, max_items: 1,
-          resource_record_sets: [
-            { name: "#{name}.", type: 'A' },
-          ],
-        })
+        stub_calls(
+          [lrr_call, lrr_request(name), lrr_response([name])],
+        )
 
         expect(Route53.ensure_dns_for_cloudfront(name, cloudfront)).to be true
       end
 
       it 'returns a record already there for a subdomain' do
         name = 'www.foo.com'
-        expect(client).to receive(:list_resource_record_sets)
-          .with(
-            hosted_zone_id: 'abcd',
-            start_record_name: name,
-            max_items: 1,
-          ).and_call_original
-
-        client.stub_responses(:list_resource_record_sets, {
-          is_truncated: false, max_items: 1,
-          resource_record_sets: [
-            { name: "#{name}.", type: 'A' },
-          ],
-        })
+        stub_calls(
+          [lrr_call, lrr_request(name), lrr_response([name])],
+        )
 
         expect(Route53.ensure_dns_for_cloudfront(name, cloudfront)).to be true
       end
 
       it 'creates a record if needed' do
         name = 'www.foo.com'
+        stub_calls(
+          [lrr_call, lrr_request(name), lrr_response([])],
+          [
+            crr_call,
+            crr_request(
+              :CloudFront, name, target: {
+                dns_name: cf_domain,
+                evaluate_target_health: false,
+              },
+            ),
+            crr_response(:CloudFront, name),
+          ],
+        )
 
-        expect(client).to receive(:list_resource_record_sets)
-          .with(
-            hosted_zone_id: 'abcd',
-            start_record_name: name,
-            max_items: 1,
-          ).and_call_original
-
-        client.stub_responses(:list_resource_record_sets, {
-          is_truncated: false, max_items: 1,
-          resource_record_sets: [],
-        })
-
-        expect(client).to receive(:change_resource_record_sets)
-          .with(
-            hosted_zone_id: 'abcd',
-            change_batch: {
-              comment: "Create DNS for CloudFront #{name}",
-              changes: [
-                {
-                  action: "CREATE",
-                  resource_record_set: {
-                    name: "#{name}.",
-                    type: 'A',
-                    alias_target: {
-                      hosted_zone_id: hosted_zone_targets[:CloudFront],
-                      dns_name: cf_domain,
-                      evaluate_target_health: false,
-                    },
-                  },
-                },
-              ],
-            },
-          ).and_call_original
-
-        client.stub_responses(:change_resource_record_sets, { change_info: {
-          id: 'abcd', status: 'PENDING', comment: "Create DNS for CloudFront #{name}",
-          submitted_at: Time.now,
-        }})
         expect(Route53.ensure_dns_for_cloudfront(name, cloudfront)).to be true
       end
     end
