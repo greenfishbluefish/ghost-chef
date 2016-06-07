@@ -8,7 +8,7 @@ class Cloudfront
       resp = @@client.send(
         method.to_sym, **args.merge(marker: resp.next_marker)
       ).distribution_list
-      items.concat!(resp.send(key.to_sym).select(&filter))
+      items.concat(resp.send(key.to_sym).select(&filter))
     end
     items
   end
