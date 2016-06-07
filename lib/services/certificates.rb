@@ -7,7 +7,7 @@ class Certificates
     end.first
   end
 
-  def self.ensure_certificate(domain)
+  def self.ensure_certificate(domain, validation_domain=domain)
     cert = retrieve_certificate(domain)
     unless cert
       cert = @@client.request_certificate(
@@ -15,7 +15,7 @@ class Certificates
         domain_validation_options: [
           {
             domain_name: domain,
-            validation_domain: 'cyanna.com',
+            validation_domain: validation_domain,
           },
         ],
       )

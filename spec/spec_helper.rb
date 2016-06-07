@@ -1,8 +1,8 @@
 require 'simplecov'
 SimpleCov.start do
   add_filter '/spec/'
-  minimum_coverage 30
-  minimum_coverage_by_file 18
+  minimum_coverage 33
+  minimum_coverage_by_file 19
   refuse_coverage_drop
 end
 
@@ -41,7 +41,7 @@ RSpec.configure do |config|
     config.default_formatter = 'doc'
   end
 
-  config.profile_examples = 3
+  config.profile_examples = 2
 
   config.order = :random
   Kernel.srand config.seed
