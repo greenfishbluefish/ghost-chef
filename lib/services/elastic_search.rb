@@ -1,7 +1,4 @@
-
-
 class ElasticSearch
-
   @@client ||= Aws::ElasticsearchService::Client.new
 
   def self.retrieve(domain_name)
@@ -55,5 +52,4 @@ class ElasticSearch
 
     es_domain.domain_status.endpoint
   end
-
 end
