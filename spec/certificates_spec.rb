@@ -1,5 +1,5 @@
-describe Certificates do
-  let(:client) { Certificates.class_variable_get('@@client') }
+describe GhostChef::Certificates do
+  let(:client) { GhostChef::Certificates.class_variable_get('@@client') }
 
   context '#retrieve_certificate' do
     context "with no certificates" do
@@ -7,7 +7,7 @@ describe Certificates do
         stub_calls([:list_certificates, {}, {certificate_summary_list: []}])
       }
       it 'finds nothing' do
-        expect(Certificates.retrieve_certificate('foo.com')).to be_falsy
+        expect(GhostChef::Certificates.retrieve_certificate('foo.com')).to be_falsy
       end
     end
 
@@ -20,11 +20,11 @@ describe Certificates do
         }])
       }
       it "finds nothing searching for the wrong one" do
-        expect(Certificates.retrieve_certificate('bar.com')).to be_falsy
+        expect(GhostChef::Certificates.retrieve_certificate('bar.com')).to be_falsy
       end
       it "finds something searching for the right one" do
         expect(
-          Certificates.retrieve_certificate('foo.com').domain_name
+          GhostChef::Certificates.retrieve_certificate('foo.com').domain_name
         ).to eql 'foo.com'
       end
     end
@@ -39,11 +39,11 @@ describe Certificates do
         }])
       }
       it "finds nothing searching for the wrong one" do
-        expect(Certificates.retrieve_certificate('bar.com')).to be_falsy
+        expect(GhostChef::Certificates.retrieve_certificate('bar.com')).to be_falsy
       end
       it "finds something searching for the right one" do
         expect(
-          Certificates.retrieve_certificate('foo.com').domain_name
+          GhostChef::Certificates.retrieve_certificate('foo.com').domain_name
         ).to eql 'foo.com'
       end
     end
@@ -61,7 +61,7 @@ describe Certificates do
 
       it "does not call #request_certificate" do
         expect(client).to_not receive(:request_certificate)
-        expect(Certificates.ensure_certificate('foo.com')).to be_truthy
+        expect(GhostChef::Certificates.ensure_certificate('foo.com')).to be_truthy
       end
     end
 
@@ -87,7 +87,7 @@ describe Certificates do
           }, {}])
 
           expect{
-            begin Certificates.ensure_certificate('foo.com')
+            begin GhostChef::Certificates.ensure_certificate('foo.com')
             rescue SystemExit => e
               expect(e.status).to eql 1
             end
@@ -114,7 +114,7 @@ describe Certificates do
           }, {}])
 
           expect{
-            begin Certificates.ensure_certificate('foo.com')
+            begin GhostChef::Certificates.ensure_certificate('foo.com')
             rescue SystemExit => e
               expect(e.status).to eql 1
             end
@@ -133,7 +133,7 @@ describe Certificates do
           }, {}])
 
           expect{
-            begin Certificates.ensure_certificate('foo.com', 'bar.com')
+            begin GhostChef::Certificates.ensure_certificate('foo.com', 'bar.com')
             rescue SystemExit => e
               expect(e.status).to eql 1
             end

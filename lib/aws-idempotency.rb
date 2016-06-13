@@ -4,6 +4,11 @@ Aws.config.update({
   region: 'us-east-1',
 })
 
+module GhostChef
+	VERSION = '0.0.1'
+  class Error < RuntimeError; end
+end
+
 require_relative 'util'
 
 require_relative 'services/junk_drawer'

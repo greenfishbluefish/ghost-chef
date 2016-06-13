@@ -1,4 +1,4 @@
-class Util
+class GhostChef::Util
   def self.descend(obj, keys)
     value = obj
     if keys

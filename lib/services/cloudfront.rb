@@ -1,8 +1,8 @@
-class Cloudfront
+class GhostChef::Cloudfront
   @@client ||= Aws::CloudFront::Client.new
 
   def self.filter(methods, args, key, &filter)
-    Util.filter(@@client, methods, args, key, [:next_marker, :marker], &filter)
+    GhostChef::Util.filter(@@client, methods, args, key, [:next_marker, :marker], &filter)
   end
 
   def self.find_distribution_for_domain(domain)

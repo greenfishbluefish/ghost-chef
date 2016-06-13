@@ -1,5 +1,5 @@
-describe Cloudfront do
-  let(:client) { Cloudfront.class_variable_get('@@client') }
+describe GhostChef::Cloudfront do
+  let(:client) { GhostChef::Cloudfront.class_variable_get('@@client') }
 
   def ld_response(opts)
     rv = {
@@ -119,7 +119,7 @@ describe Cloudfront do
       before { build_ld_stubs([]) }
 
       it 'finds nothing' do
-        expect(Cloudfront.find_distribution_for_domain('foo.com')).to be nil
+        expect(GhostChef::Cloudfront.find_distribution_for_domain('foo.com')).to be nil
       end
     end
 
@@ -127,11 +127,11 @@ describe Cloudfront do
       before { build_ld_stubs(['foo.com']) }
 
       it 'finds the distribution when given the right value' do
-        expect(Cloudfront.find_distribution_for_domain('foo.com')).to be_truthy
+        expect(GhostChef::Cloudfront.find_distribution_for_domain('foo.com')).to be_truthy
       end
 
       it 'finds nothing when given the wrong value' do
-        expect(Cloudfront.find_distribution_for_domain('bar.com')).to be nil
+        expect(GhostChef::Cloudfront.find_distribution_for_domain('bar.com')).to be nil
       end
     end
 
@@ -139,7 +139,7 @@ describe Cloudfront do
       before { build_ld_stubs(['foo.com'], ['bar.com']) }
 
       it 'finds the distribution' do
-        expect(Cloudfront.find_distribution_for_domain('foo.com')).to be_truthy
+        expect(GhostChef::Cloudfront.find_distribution_for_domain('foo.com')).to be_truthy
       end
     end
   end
@@ -149,7 +149,7 @@ describe Cloudfront do
       before { build_ld_stubs(['my-bucket.s3.amazonaws.com']) }
 
       it 'finds the distribution' do
-        expect(Cloudfront.ensure_distribution_for_s3('my-bucket')).to be_truthy
+        expect(GhostChef::Cloudfront.ensure_distribution_for_s3('my-bucket')).to be_truthy
       end
     end
 
@@ -209,7 +209,7 @@ describe Cloudfront do
           }
         }, cd_response])
 
-        expect(Cloudfront.ensure_distribution_for_s3(bucket_name)).to be_truthy
+        expect(GhostChef::Cloudfront.ensure_distribution_for_s3(bucket_name)).to be_truthy
       end
 
       it 'creates the distribution with SSL override' do
@@ -268,7 +268,7 @@ describe Cloudfront do
         }, cd_response])
 
         expect(
-          Cloudfront.ensure_distribution_for_s3(
+          GhostChef::Cloudfront.ensure_distribution_for_s3(
             bucket_name, acm_ssl: OpenStruct.new({certificate_arn: 'cert1'}),
           )
         ).to be_truthy
@@ -309,7 +309,7 @@ describe Cloudfront do
         }}],
       )
       expect {
-        expect(Cloudfront.waitfor_distribution_deployed(distro)).to be_truthy
+        expect(GhostChef::Cloudfront.waitfor_distribution_deployed(distro)).to be_truthy
       }.to output(/Waiting for distribution to be deployed/).to_stdout
     end
   end

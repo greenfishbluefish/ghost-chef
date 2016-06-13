@@ -1,8 +1,8 @@
-class Notifications
+class GhostChef::Notifications
   @@client ||= Aws::SNS::Client.new
 
   def self.filter(method, args, key, &filter)
-    Util.filter(
+    GhostChef::Util.filter(
       @@client, method, args, key, [:next_token, :next_token], &filter
     )
   end

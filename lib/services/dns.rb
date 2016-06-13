@@ -1,4 +1,4 @@
-class Route53
+class GhostChef::Route53
   @@client ||= Aws::Route53::Client.new
 
   def self.zone_for_name(name)

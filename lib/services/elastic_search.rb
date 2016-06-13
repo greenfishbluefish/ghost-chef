@@ -1,4 +1,4 @@
-class ElasticSearch
+class GhostChef::ElasticSearch
   @@client ||= Aws::ElasticsearchService::Client.new
 
   def self.retrieve(domain_name)

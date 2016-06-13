@@ -1,4 +1,4 @@
-class S3
+class GhostChef::S3
   @@client ||= Aws::S3::Client.new
 
   def self.bucket_exists(name)
