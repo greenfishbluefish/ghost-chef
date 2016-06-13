@@ -109,7 +109,66 @@ describe Util do
       end
     end
 
-    context "when descending multiple keys" do
+    # The CloudFront requires you to descend one level to get to the master RV.
+    # Every other client returns the master RV directly.
+    context "when descending multiple keys (method)" do
+      context "when 1 is returned, 2 keys" do
+        let (:obj) {
+          Class.new do
+            def method(opts={})
+              OpenStruct.new(key1: OpenStruct.new(key2: [ 'a' ], check: nil))
+            end
+          end.new
+        }
+
+        it "returns no values when filter is closed" do
+          expect(Util.filter(obj, [:method, :key1], {}, :key2, [ :check, :next ]) { false }).to eql []
+        end
+        it "returns all values when filter is open" do
+          expect(Util.filter(obj, [:method, :key1], {}, :key2, [ :check, :next ]) { true }).to eql ['a']
+        end
+      end
+
+      context "when 2+2+1 is returned, 3 keys" do
+        let(:obj) {
+          Class.new do
+            def method(opts={})
+              if !opts[:next]
+                build(['a', 'b'], 'abcd')
+              elsif opts[:next] == 'abcd'
+                build(['c', 'd'], 'efgh')
+              else
+                build(['e'], nil)
+              end
+            end
+            private
+            def build(value, check)
+              OpenStruct.new(
+                key1: OpenStruct.new(
+                  key2: OpenStruct.new(
+                    key3: value,
+                    check: check,
+                  ),
+                ),
+              )
+            end
+          end.new
+        }
+
+        it "returns all values when filter is open" do
+          expect(
+            Util.filter(obj, %w(method key1 key2), {}, %w(key3), [ :check, :next ]) { true }
+          ).to eql ['a', 'b', 'c', 'd', 'e']
+        end
+        it "returns no values when filter is closed" do
+          expect(
+            Util.filter(obj, %w(method key1 key2), {}, %w(key3), [ :check, :next ]) { false }
+          ).to eql []
+        end
+      end
+    end
+
+    context "when descending multiple keys (filter)" do
       context "when 1 is returned, 2 keys" do
         let (:obj) {
           Class.new do

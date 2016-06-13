@@ -1,20 +1,12 @@
 class Cloudfront
   @@client ||= Aws::CloudFront::Client.new
 
-  def self.filter(method, args, key, &filter)
-    resp = @@client.send(method.to_sym, **args).distribution_list
-    items = resp.send(key.to_sym).select(&filter)
-    while resp.next_marker
-      resp = @@client.send(
-        method.to_sym, **args.merge(marker: resp.next_marker)
-      ).distribution_list
-      items.concat(resp.send(key.to_sym).select(&filter))
-    end
-    items
+  def self.filter(methods, args, key, &filter)
+    Util.filter(@@client, methods, args, key, [:next_marker, :marker], &filter)
   end
 
   def self.find_distribution_for_domain(domain)
-    filter(:list_distributions, {}, :items) do |item|
+    filter([:list_distributions, :distribution_list], {}, :items) do |item|
       domain_not_found = item.origins.items.select do |origin|
         origin.domain_name == domain
       end.empty?
