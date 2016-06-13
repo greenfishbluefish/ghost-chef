@@ -28,10 +28,6 @@ class Clients
   def self.rds
     @@rds ||= Aws::RDS::Client.new
   end
-
-  def self.sns
-    @@sns ||= Aws::SNS::Client.new
-  end
 end
 
 def tags(override={})
@@ -53,6 +49,9 @@ def tags_from_hash(tags)
     { key: v[0].to_s, value: v[1] }
   }
 end
+
+################################################################################
+# EC2
 
 def rules_from_hash(rules)
   rules.map do |e|
@@ -81,8 +80,6 @@ def rules_from_hash(rules)
     rv
   end
 end
-
-################################################################################
 
 def ensure_security_group_rules(group, rules)
   {
@@ -290,6 +287,7 @@ def ensure_instances_are_launched(instances)
 end
 
 ################################################################################
+# ELB
 
 # This needs to ensure the ELB with that name has the right stuff:
 # * listeners
@@ -324,6 +322,7 @@ def ensure_instances_in_service(elb, instances)
 end
 
 ################################################################################
+# IAM
 
 def retrieve_role(name)
   Clients.iam.get_role(role_name: name).role
@@ -436,6 +435,7 @@ def ensure_instance_profile(name, options)
 end
 
 ################################################################################
+# EC2
 
 def retrieve_ami(id)
   Clients.ec2.describe_images(
@@ -464,6 +464,9 @@ def destroy_ami(ami)
     end
   end
 end
+
+################################################################################
+# ASG
 
 def retrieve_launch_configuration(name)
   Clients.asg.describe_launch_configurations(
@@ -556,6 +559,9 @@ def detach_asg_from_elb(asg, elb)
   end
 end
 
+################################################################################
+# ASG, EC2
+
 def destroy_auto_scaling_group(asg)
   # Ensure that all instances are terminated and that the ASG no longer spawns instances
   puts "  Terminating all instances in ASG"
@@ -593,6 +599,7 @@ def destroy_auto_scaling_group(asg)
 end
 
 ################################################################################
+# CloudWatch, EC2, RDS
 
 class CloudWatch
   def self.metrics
