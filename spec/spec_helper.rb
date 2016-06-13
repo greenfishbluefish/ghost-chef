@@ -7,14 +7,14 @@ SimpleCov.start do
 end
 
 # Because the clients are created eagerly (upon class load), we have to set the
-# AWS SDK to stubbed before we load aws-idempotency.
+# AWS SDK to stubbed before we load ghost-chef.
 require 'aws-sdk'
 Aws.config.update({
   stub_responses: true,
 })
 
 # Code under test, located in /lib/
-require 'aws-idempotency'
+require 'ghost-chef'
 
 # Helpers, located in /spec/
 require 'aws_stubbing'
