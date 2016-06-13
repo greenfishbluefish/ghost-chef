@@ -1,8 +1,14 @@
 class Certificates
   @@client ||= Aws::ACM::Client.new
 
+  def self.filter(method, args, key, &filter)
+    Util.filter(
+      @@client, method, args, key, [:next_token, :next_token], &filter
+    )
+  end
+
   def self.retrieve_certificate(domain)
-    filter(@@client, :list_certificates, {}, :certificate_summary_list) do |cert|
+    filter(:list_certificates, {}, :certificate_summary_list) do |cert|
       cert.domain_name == domain
     end.first
   end

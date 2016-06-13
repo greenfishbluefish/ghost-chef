@@ -54,21 +54,6 @@ def tags_from_hash(tags)
   }
 end
 
-# This method is used for those calls that don't provide their own filtering.
-def filter(client, method, args, key, &filter)
-  resp = client.send(method.to_sym, **args)
-  items = resp.send(key.to_sym).select(&filter)
-  while resp.next_token
-    resp = client.send(method.to_sym, **args.merge(next_token: resp.next_token))
-    items.concat!(resp.send(key.to_sym).select(&filter))
-  end
-  items
-end
-
-def retrieve_all(client, method, args, key)
-  filter(client, method, args, key) { true }
-end
-
 def rules_from_hash(rules)
   rules.map do |e|
     rv = Aws::EC2::Types::IpPermission.new(
@@ -96,6 +81,8 @@ def rules_from_hash(rules)
     rv
   end
 end
+
+################################################################################
 
 def ensure_security_group_rules(group, rules)
   {
@@ -302,6 +289,8 @@ def ensure_instances_are_launched(instances)
   end
 end
 
+################################################################################
+
 # This needs to ensure the ELB with that name has the right stuff:
 # * listeners
 # * subnets
@@ -333,6 +322,8 @@ def ensure_instances_in_service(elb, instances)
     instances: instances.map {|e| { instance_id: e.instance_id } },
   )
 end
+
+################################################################################
 
 def retrieve_role(name)
   Clients.iam.get_role(role_name: name).role
@@ -443,6 +434,8 @@ def ensure_instance_profile(name, options)
     )
   end
 end
+
+################################################################################
 
 def retrieve_ami(id)
   Clients.ec2.describe_images(
@@ -599,46 +592,7 @@ def destroy_auto_scaling_group(asg)
   destroy_ami(retrieve_ami(image_id))
 end
 
-def retrieve_topic(name)
-  filter(Clients.sns, :list_topics, {}, :topics) do |item|
-    item.topic_arn.match(/:#{name}$/)
-  end.first
-end
-def ensure_topic(name)
-  topic = retrieve_topic(name)
-  unless topic
-    Clients.sns.create_topic(name: name)
-    topic = retrieve_topic(name)
-  end
-  topic
-end
-
-def retrieve_subscription(topic, endpoint, protocol='https')
-  filter(
-    Clients.sns,
-    :list_subscriptions_by_topic,
-    {topic_arn: topic.topic_arn},
-    :subscriptions,
-  ) do |s|
-    s.endpoint == endpoint && s.protocol == protocol
-  end.first
-end
-def ensure_topic_subscription(topic, endpoint, protocol='https')
-  subscription = retrieve_subscription(topic, endpoint, protocol)
-  unless subscription
-    Clients.sns.subscribe(
-      topic_arn: topic.topic_arn,
-      protocol: protocol,
-      endpoint: endpoint,
-    )
-    subscription = retrieve_subscription(name, endpoint, protocol)
-
-    # Need to block until the subscription has been confirmed.
-    # or throw an error after a specific amount of time.
-  end
-
-  subscription
-end
+################################################################################
 
 class CloudWatch
   def self.metrics

@@ -1,8 +1,8 @@
 require 'simplecov'
 SimpleCov.start do
   add_filter '/spec/'
-  minimum_coverage 41
-  minimum_coverage_by_file 19
+  minimum_coverage 47
+  minimum_coverage_by_file 17
   refuse_coverage_drop
 end
 
@@ -13,8 +13,10 @@ Aws.config.update({
   stub_responses: true,
 })
 
+# Code under test, located in /lib/
 require 'aws-idempotency'
 
+# Helpers, located in /spec/
 require 'aws_stubbing'
 
 RSpec.configure do |config|
