@@ -1,55 +1,63 @@
+##
+# This class manages all interaction with ElasticSearch, Amazon's ES service.
 class GhostChef::ElasticSearch
   @@client ||= Aws::ElasticsearchService::Client.new
 
+  ##
+  # Given a domain name, this returns the AWS ElasticSearch instance for that
+  # domain. If it doesn't exist, this will return nil.
+  #
+  # If it is being deleted, this will raise a GhostChef::Error.
+  #
+  # In general, use ensure() instead of this method.
   def self.retrieve(domain_name)
     es_domain = @@client.describe_elasticsearch_domain(domain_name: domain_name)
 
     #TODO: what to do in this case? 
-    raise "This domain is currently being deleted" if es_domain.domain_status.deleted
+    raise GhostChef::Error, "This domain is currently being deleted" if es_domain.domain_status.deleted
 
     es_domain
   rescue Aws::ElasticsearchService::Errors::ResourceNotFoundException
-    false
+    nil
   end
 
-  def self.create(domain_name, opts = {})
-    opts = opts.merge(domain_name: domain_name)
-
-    @@client.create_elasticsearch_domain(opts)
-
-    self.retrieve(domain_name)
-  end
-
+  ##
+  # Given a domain name, this returns the AWS ElasticSearch instance for that
+  # domain. If it doesn't exist, this will create it using the provided opts.
   def self.ensure(domain_name, opts = {})
-    self.retrieve(domain_name) || self.create(domain_name, opts)
+    domain = retrieve(domain_name)
+    unless domain
+      @@client.create_elasticsearch_domain(
+        **opts.merge(domain_name: domain_name)
+      )
+
+      domain = retrieve(domain_name)
+    end
+    domain
   end
 
+  ##
+  # Unlike most clients, the Aws::ElasticsearchService::Client does not define
+  # any waiters. This means we have to create our own waiter. This waiter is
+  # specifically created to ensure a given ElasticSearch domain has an active
+  # and available endpoint. This also means the ElasticSearch object has stopped
+  # processing.
+  #
+  # Given a domain_name, this method will block until the associated domain
+  # is ready for usage. It will sleep for 30 seconds between iterations.
   def self.ensure_endpoint_available(domain_name)
+    domain = retrieve(domain_name) or raise GhostChef::Error, "Domain does not exist"
+
     # wait until processing is completed
     # Endpoint won't be available until then
-    while self.processing?(domain_name) || !self.endpoint_available?(domain_name)
+    while domain.domain_status.processing || !domain.domain_status.endpoint
       puts "Elasticsearch domain is still processing..."
       sleep 30
+
+      # Re-retrieve the domain object to refresh it.
+      domain = retrieve(domain_name)
     end
 
-    self.endpoint(domain_name)
-  end
-
-  def self.processing?(domain_name)
-    es_domain = self.retrieve(domain_name)
-    raise "Elasticsearch domain not found" unless es_domain
-
-    es_domain.domain_status.processing
-  end
-
-  def self.endpoint_available?(domain_name)
-    !self.endpoint(domain_name).nil?
-  end
-
-  def self.endpoint(domain_name)
-    es_domain = self.retrieve(domain_name)
-    raise "Elasticsearch domain not found" unless es_domain
-
-    es_domain.domain_status.endpoint
+    domain.domain_status.endpoint
   end
 end

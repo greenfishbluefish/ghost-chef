@@ -1,10 +1,11 @@
+##
+# This class manages all interaction with CloudFront, Amazon's CDN service.
 class GhostChef::Cloudfront
   @@client ||= Aws::CloudFront::Client.new
 
-  def self.filter(methods, args, key, &filter)
-    GhostChef::Util.filter(@@client, methods, args, key, [:next_marker, :marker], &filter)
-  end
-
+  ##
+  # This method will, given a domain name, return a distribution that serves
+  # content for that name. If one does not exist, then it will return nil.
   def self.find_distribution_for_domain(domain)
     filter([:list_distributions, :distribution_list], {}, :items) do |item|
       domain_not_found = item.origins.items.select do |origin|
@@ -14,6 +15,17 @@ class GhostChef::Cloudfront
     end.first
   end
 
+  ##
+  # This method will, given a bucket, ensure that a distribution exists for that
+  # S3 bucket. If it does not exist, one will be created using the provided
+  # opts, then returned.
+  #
+  # The opts can contain:
+  # * aliases: Alternate DNS names that resolve to this bucket.
+  #   * The default is [].
+  # * acm_ssl: This is an ACM object representing the certificate.
+  #   * Use the return value from GhostChef::Certificates.ensure_certificate().
+  #   * If this is not provided, then the bucket will be served over HTTP.
   def self.ensure_distribution_for_s3(bucket, opts={})
     distro = find_distribution_for_domain("#{bucket}.s3.amazonaws.com")
     unless distro
@@ -88,5 +100,13 @@ class GhostChef::Cloudfront
     puts "\t(This can take up to 20 minutes.)"
 
     @@client.wait_until(:distribution_deployed, id: distro.id)
+  end
+
+  private
+
+  def self.filter(methods, args, key, &filter)
+    GhostChef::Util.filter(
+      @@client, methods, args, key, [:next_marker, :marker], &filter
+    )
   end
 end
