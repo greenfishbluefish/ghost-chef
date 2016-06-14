@@ -82,14 +82,14 @@ describe GhostChef::Cloudfront do
     stub_calls(*stubs)
   end
 
-  def cd_response
+  def cd_response(domain_name)
     {
       distribution: {
         id: 'abcd',
         status: 'pending',
         last_modified_time: Time.now,
         in_progress_invalidation_batches: 0,
-        domain_name: 'abcd',
+        domain_name: domain_name,
         active_trusted_signers: {enabled: false, quantity:0},
         distribution_config: {
           caller_reference: 'abcd',
@@ -127,7 +127,9 @@ describe GhostChef::Cloudfront do
       before { build_ld_stubs(['foo.com']) }
 
       it 'finds the distribution when given the right value' do
-        expect(described_class.find_distribution_for_domain('foo.com')).to be_truthy
+        expect(
+          described_class.find_distribution_for_domain('foo.com')
+        ).to descend_match(domain_name: 'foo.com')
       end
 
       it 'finds nothing when given the wrong value' do
@@ -139,7 +141,9 @@ describe GhostChef::Cloudfront do
       before { build_ld_stubs(['foo.com'], ['bar.com']) }
 
       it 'finds the distribution' do
-        expect(described_class.find_distribution_for_domain('foo.com')).to be_truthy
+        expect(
+          described_class.find_distribution_for_domain('foo.com')
+        ).to descend_match(domain_name: 'foo.com')
       end
     end
   end
@@ -149,7 +153,9 @@ describe GhostChef::Cloudfront do
       before { build_ld_stubs(['my-bucket.s3.amazonaws.com']) }
 
       it 'finds the distribution' do
-        expect(described_class.ensure_distribution_for_s3('my-bucket')).to be_truthy
+        expect(
+          described_class.ensure_distribution_for_s3('my-bucket')
+        ).to descend_match(domain_name: 'my-bucket.s3.amazonaws.com')
       end
     end
 
@@ -207,9 +213,11 @@ describe GhostChef::Cloudfront do
             },
             enabled: true,
           }
-        }, cd_response])
+        }, cd_response("#{bucket_name}.s3.amazonaws.com")])
 
-        expect(described_class.ensure_distribution_for_s3(bucket_name)).to be_truthy
+        expect(
+          described_class.ensure_distribution_for_s3(bucket_name)
+        ).to descend_match(domain_name: "#{bucket_name}.s3.amazonaws.com")
       end
 
       it 'creates the distribution with SSL override' do
@@ -265,13 +273,13 @@ describe GhostChef::Cloudfront do
             },
             enabled: true,
           }
-        }, cd_response])
+        }, cd_response("#{bucket_name}.s3.amazonaws.com")])
 
         expect(
           described_class.ensure_distribution_for_s3(
             bucket_name, acm_ssl: OpenStruct.new({certificate_arn: 'cert1'}),
           )
-        ).to be_truthy
+        ).to descend_match(domain_name: "#{bucket_name}.s3.amazonaws.com")
       end
     end
   end
@@ -309,7 +317,7 @@ describe GhostChef::Cloudfront do
         }}],
       )
       expect {
-        expect(described_class.waitfor_distribution_deployed(distro)).to be_truthy
+        expect(described_class.waitfor_distribution_deployed(distro)).to be true
       }.to output(/Waiting for distribution to be deployed/).to_stdout
     end
   end

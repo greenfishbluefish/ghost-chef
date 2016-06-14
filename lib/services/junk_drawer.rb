@@ -324,11 +324,6 @@ end
 ################################################################################
 # IAM
 
-def retrieve_role(name)
-  GhostChef::Clients.iam.get_role(role_name: name).role
-rescue Aws::IAM::Errors::NoSuchEntity
-  nil
-end
 def retrieve_attached_policies(role)
   attached_policies = {}
   resp = GhostChef::Clients.iam.list_attached_role_policies(

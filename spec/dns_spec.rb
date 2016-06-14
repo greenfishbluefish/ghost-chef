@@ -89,11 +89,15 @@ describe GhostChef::Route53 do
       )}
 
       it "returns the TLD for the TLD" do
-        expect(described_class.zone_for_name('foo.com').name).to eql 'foo.com'
+        expect(
+          described_class.zone_for_name('foo.com')
+        ).to descend_match name: 'foo.com'
       end
 
       it "returns the TLD for a subdomain" do
-        expect(described_class.zone_for_name('www.foo.com').name).to eql 'foo.com'
+        expect(
+          described_class.zone_for_name('www.foo.com')
+        ).to descend_match name: 'foo.com'
       end
     end
   end

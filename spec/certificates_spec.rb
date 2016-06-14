@@ -7,7 +7,7 @@ describe GhostChef::Certificates do
         stub_calls([:list_certificates, {}, {certificate_summary_list: []}])
       }
       it 'finds nothing' do
-        expect(described_class.retrieve_certificate('foo.com')).to be_falsy
+        expect(described_class.retrieve_certificate('foo.com')).to be nil
       end
     end
 
@@ -20,12 +20,12 @@ describe GhostChef::Certificates do
         }])
       }
       it "finds nothing searching for the wrong one" do
-        expect(described_class.retrieve_certificate('bar.com')).to be_falsy
+        expect(described_class.retrieve_certificate('bar.com')).to be nil
       end
       it "finds something searching for the right one" do
         expect(
-          described_class.retrieve_certificate('foo.com').domain_name
-        ).to eql 'foo.com'
+          described_class.retrieve_certificate('foo.com')
+        ).to descend_match(domain_name: 'foo.com')
       end
     end
 
@@ -39,12 +39,12 @@ describe GhostChef::Certificates do
         }])
       }
       it "finds nothing searching for the wrong one" do
-        expect(described_class.retrieve_certificate('bar.com')).to be_falsy
+        expect(described_class.retrieve_certificate('bar.com')).to be nil
       end
       it "finds something searching for the right one" do
         expect(
-          described_class.retrieve_certificate('foo.com').domain_name
-        ).to eql 'foo.com'
+          described_class.retrieve_certificate('foo.com')
+        ).to descend_match(domain_name: 'foo.com')
       end
     end
   end
@@ -61,7 +61,9 @@ describe GhostChef::Certificates do
 
       it "does not call #request_certificate" do
         expect(client).to_not receive(:request_certificate)
-        expect(described_class.ensure_certificate('foo.com')).to be_truthy
+        expect(
+          described_class.ensure_certificate('foo.com')
+        ).to descend_match(domain_name: 'foo.com')
       end
     end
 

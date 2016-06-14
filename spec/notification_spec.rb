@@ -12,7 +12,9 @@ describe GhostChef::Notifications do
     context "when it exists alone" do
       before { stub_calls([:list_topics, {}, {topics:[{topic_arn:'abcd:foo'}]}]) }
       it "returns the topic" do
-        expect(described_class.retrieve_topic('foo')).to be_truthy
+        expect(
+          described_class.retrieve_topic('foo')
+        ).to descend_match topic_arn: 'abcd:foo'
       end
     end
 
@@ -25,7 +27,9 @@ describe GhostChef::Notifications do
       ) }
 
       it "returns the topic" do
-        expect(described_class.retrieve_topic('foo')).to be_truthy
+        expect(
+          described_class.retrieve_topic('foo')
+        ).to descend_match topic_arn: 'abcd:foo'
       end
 
       it "returns nil when not found" do
@@ -38,7 +42,9 @@ describe GhostChef::Notifications do
     context "when it already exists" do
       before { stub_calls([:list_topics, {}, {topics:[{topic_arn:'abcd:foo'}]}]) }
       it "returns the topic" do
-        expect(described_class.ensure_topic('foo')).to be_truthy
+        expect(
+          described_class.ensure_topic('foo')
+        ).to descend_match topic_arn: 'abcd:foo'
       end
     end
 
@@ -49,7 +55,9 @@ describe GhostChef::Notifications do
         [:list_topics, {}, {topics:[{topic_arn:'abcd:foo'}]}],
       ) }
       it "returns the topic" do
-        expect(described_class.ensure_topic('foo')).to be_truthy
+        expect(
+          described_class.ensure_topic('foo')
+        ).to descend_match topic_arn: 'abcd:foo'
       end
     end
   end
@@ -64,7 +72,9 @@ describe GhostChef::Notifications do
         [:list_subscriptions_by_topic, {topic_arn: 'abcd:foo'}, {subscriptions:[]}],
       ) }
       it "returns nil" do
-        expect(described_class.retrieve_subscription(topic, endpoint)).to be nil
+        expect(
+          described_class.retrieve_subscription(topic, endpoint)
+        ).to be nil
       end
     end
 
@@ -79,13 +89,19 @@ describe GhostChef::Notifications do
         ],
       ) }
       it "returns the subscription" do
-        expect(described_class.retrieve_subscription(topic, endpoint)).to be_truthy
+        expect(
+          described_class.retrieve_subscription(topic, endpoint)
+        ).to descend_match endpoint: endpoint, protocol: 'https'
       end
       it "returns the subscription when specifying protocol" do
-        expect(described_class.retrieve_subscription(topic, endpoint, 'https')).to be_truthy
+        expect(
+          described_class.retrieve_subscription(topic, endpoint, 'https')
+        ).to descend_match endpoint: endpoint, protocol: 'https'
       end
       it "returns nil when specifying the wrong protocol" do
-        expect(described_class.retrieve_subscription(topic, endpoint, 'http')).to be nil
+        expect(
+          described_class.retrieve_subscription(topic, endpoint, 'http')
+        ).to be nil
       end
     end
 
@@ -102,13 +118,19 @@ describe GhostChef::Notifications do
       ) }
 
       it "returns the right subscription" do
-        expect(described_class.retrieve_subscription(topic, endpoint).owner).to eql 'John'
+        expect(
+          described_class.retrieve_subscription(topic, endpoint)
+        ).to descend_match protocol: 'https', owner: 'John'
       end
-      it "returns the right subscription when specifying protocol" do
-        expect(described_class.retrieve_subscription(topic, endpoint, 'https').owner).to eql 'John'
+      it "returns the right subscription when specifying https" do
+        expect(
+          described_class.retrieve_subscription(topic, endpoint, 'https')
+        ).to descend_match protocol: 'https', owner: 'John'
       end
-      it "returns nil when specifying the wrong protocol" do
-        expect(described_class.retrieve_subscription(topic, endpoint, 'http').owner).to eql 'Jane'
+      it "returns the right subscription when specifying http" do
+        expect(
+          described_class.retrieve_subscription(topic, endpoint, 'http')
+        ).to descend_match protocol: 'http', owner: 'Jane'
       end
     end
   end
@@ -129,10 +151,14 @@ describe GhostChef::Notifications do
         ],
       ) }
       it "returns the subscription" do
-        expect(described_class.ensure_subscription(topic, endpoint)).to be_truthy
+        expect(
+          described_class.ensure_subscription(topic, endpoint)
+        ).to descend_match endpoint: endpoint, protocol: 'https'
       end
       it "returns the subscription when specifying protocol" do
-        expect(described_class.ensure_subscription(topic, endpoint, 'https')).to be_truthy
+        expect(
+          described_class.ensure_subscription(topic, endpoint, 'https')
+        ).to descend_match endpoint: endpoint, protocol: 'https'
       end
     end
 
@@ -157,10 +183,14 @@ describe GhostChef::Notifications do
         ],
       ) }
       it "returns the subscription" do
-        expect(described_class.ensure_subscription(topic, endpoint)).to be_truthy
+        expect(
+          described_class.ensure_subscription(topic, endpoint)
+        ).to descend_match endpoint: endpoint, protocol: 'https'
       end
       it "returns the subscription when specifying protocol" do
-        expect(described_class.ensure_subscription(topic, endpoint, 'https')).to be_truthy
+        expect(
+          described_class.ensure_subscription(topic, endpoint, 'https')
+        ).to descend_match endpoint: endpoint, protocol: 'https'
       end
     end
   end

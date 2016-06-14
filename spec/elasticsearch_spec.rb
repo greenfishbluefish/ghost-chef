@@ -40,14 +40,18 @@ describe GhostChef::ElasticSearch do
     context "when it exists" do
       before { stub_calls(retrieve_found) }
       it "returns the domain" do
-        expect(described_class.retrieve(domain)).to be_truthy
+        expect(described_class.retrieve(domain)).to descend_match(
+          domain_name: domain
+        )
       end
     end
 
     context "when it is being deleted" do
       before { stub_calls(retrieve_found(deleted: true)) }
       it "throws an error" do
-        expect{described_class.retrieve(domain)}.to raise_error GhostChef::Error, "This domain is currently being deleted"
+        expect {
+          described_class.retrieve(domain)
+        }.to raise_error GhostChef::Error, "This domain is currently being deleted"
       end
     end
   end
@@ -56,13 +60,17 @@ describe GhostChef::ElasticSearch do
     context 'when it already exists' do
       before { stub_calls(retrieve_found) }
       it "returns the domain" do
-        expect(described_class.ensure(domain)).to be_truthy
+        expect(described_class.ensure(domain)).to descend_match(
+          domain_name: domain
+        )
       end
     end
     context "when it doesn't already exist" do
       before { stub_calls(retrieve_not_found, create_new, retrieve_found) }
       it "returns the domain" do
-        expect(described_class.ensure(domain)).to be_truthy
+        expect(described_class.ensure(domain)).to descend_match(
+          domain_name: domain
+        )
       end
     end
   end
@@ -71,7 +79,9 @@ describe GhostChef::ElasticSearch do
     context "when it doesn't exist" do
       before { stub_calls(retrieve_not_found) }
       it "throws an error" do
-        expect{described_class.ensure_endpoint_available(domain)}.to raise_error GhostChef::Error, "Domain does not exist"
+        expect {
+          described_class.ensure_endpoint_available(domain)
+        }.to raise_error GhostChef::Error, "Domain does not exist"
       end
     end
 
@@ -84,7 +94,9 @@ describe GhostChef::ElasticSearch do
         retrieve_found(processing: false, endpoint: 'foo.bar.com'),
       ) }
       it "returns the endpoint" do
-        expect(described_class.ensure_endpoint_available(domain)).to eql 'foo.bar.com'
+        expect(
+          described_class.ensure_endpoint_available(domain)
+        ).to eql 'foo.bar.com'
       end
     end
 
@@ -96,8 +108,10 @@ describe GhostChef::ElasticSearch do
       ) }
       it "returns the endpoint" do
         expect(described_class).to receive(:sleep).with(30).exactly(1).times
-        expect{
-          expect(described_class.ensure_endpoint_available(domain)).to eql 'foo.bar.com'
+        expect {
+          expect(
+            described_class.ensure_endpoint_available(domain)
+          ).to eql 'foo.bar.com'
         }.to output(sleeping_msg).to_stdout
       end
     end
@@ -112,8 +126,10 @@ describe GhostChef::ElasticSearch do
       ) }
       it "returns the endpoint" do
         expect(described_class).to receive(:sleep).with(30).exactly(2).times
-        expect{
-          expect(described_class.ensure_endpoint_available(domain)).to eql 'foo.bar.com'
+        expect {
+          expect(
+            described_class.ensure_endpoint_available(domain)
+          ).to eql 'foo.bar.com'
         }.to output(sleeping_msg + sleeping_msg).to_stdout
       end
     end
