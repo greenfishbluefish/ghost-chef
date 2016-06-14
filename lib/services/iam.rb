@@ -37,4 +37,15 @@ class GhostChef::IAM
 
     return attached_policies
   end
+
+  ##
+  # This method will, given a instance profile name, retrieve that instance
+  # profile or return nil.
+  #
+  # In general, use ensure_instance_profile() instead of this method.
+  def self.retrieve_instance_profile(name)
+    @@client.get_instance_profile(instance_profile_name: name).instance_profile
+  rescue Aws::IAM::Errors::NoSuchEntity
+    nil
+  end
 end

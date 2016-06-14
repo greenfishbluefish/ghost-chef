@@ -2,15 +2,29 @@ describe GhostChef::IAM do
   include_context :service
 
   let(:role_name) { 'some role' }
+  let(:instance_profile_name) { 'some instance profile' }
 
-  def role_response(role_name)
+  def role_response(name)
     {
       role: {
-        role_name: role_name,
+        role_name: name,
         role_id: 'abcd',
         arn: 'some:arn:for:me',
         create_date: Time.now,
         path: '/some/path',
+      }
+    }
+  end
+
+  def instance_profile_response(name)
+    {
+      instance_profile: {
+        instance_profile_name: name,
+        instance_profile_id: 'abcd',
+        arn: 'some:arn:for:me',
+        create_date: Time.now,
+        path: '/some/path',
+        roles: [],
       }
     }
   end
@@ -112,4 +126,23 @@ describe GhostChef::IAM do
       end
     end
   end
+
+  describe '#retrieve_instance_profile' do
+    context "when the profile doesn't exist" do
+      before { stub_calls([:get_instance_profile, {instance_profile_name: instance_profile_name}, 'NoSuchEntity']) }
+      it 'returns nil' do
+        expect(described_class.retrieve_instance_profile(instance_profile_name)).to be nil
+      end
+    end
+
+    context 'when the profile exists' do
+      before { stub_calls([:get_instance_profile, {instance_profile_name: instance_profile_name}, instance_profile_response(instance_profile_name)]) }
+      it 'returns the instance_profile' do
+        expect(described_class.retrieve_instance_profile(instance_profile_name)).to descend_match(
+          instance_profile_name: instance_profile_name
+        )
+      end
+    end
+  end
+
 end

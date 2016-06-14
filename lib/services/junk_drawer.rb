@@ -374,11 +374,6 @@ def ensure_role(name, options)
   return role
 end
 
-def retrieve_instance_profile(name)
-  GhostChef::Clients.iam.get_instance_profile(instance_profile_name: name).instance_profile
-rescue Aws::IAM::Errors::NoSuchEntity
-  nil
-end
 def ensure_instance_profile(name, options)
   instance_profile = retrieve_instance_profile(name)
   unless instance_profile
