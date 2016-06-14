@@ -324,27 +324,6 @@ end
 ################################################################################
 # IAM
 
-def retrieve_attached_policies(role)
-  attached_policies = {}
-  resp = GhostChef::Clients.iam.list_attached_role_policies(
-    role_name: role.role_name,
-  )
-  resp.attached_policies.each do |policy|
-    attached_policies[policy.policy_name] = policy.policy_arn
-  end
-
-  while resp.is_truncated
-    resp = GhostChef::Clients.iam.list_attached_role_policies(
-      role_name: role.role_name,
-      marker: resp.marker,
-    )
-    resp.attached_policies.each do |policy|
-      attached_policies[policy.policy_name] = policy.policy_arn
-    end
-  end
-
-  return attached_policies
-end
 def ensure_role(name, options)
   assume_role_policy = JSON.generate({
     "Version" => "2012-10-17",

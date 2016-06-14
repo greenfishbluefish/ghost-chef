@@ -1,5 +1,5 @@
 describe GhostChef::Notifications do
-  let(:client) { described_class.class_variable_get('@@client') }
+  include_context :service
 
   describe '#retrieve_topic' do
     context "when it doesn't exist" do
@@ -63,9 +63,8 @@ describe GhostChef::Notifications do
   end
 
   describe '#retrieve_subscription' do
-    # Mock up a topic. (We should really use the SNS topic provided by AWS-SDK.)
-    let (:topic) { OpenStruct.new(topic_arn: 'abcd:foo') }
-    let (:endpoint) { 'place.com' }
+    let(:topic) { Aws::SNS::Types::Topic.new(topic_arn: 'abcd:foo') }
+    let(:endpoint) { 'place.com' }
 
     context "when it doesn't exist" do
       before { stub_calls(
@@ -136,9 +135,8 @@ describe GhostChef::Notifications do
   end
 
   describe '#ensure_subscription' do
-    # Mock up a topic. (We should really use the SNS topic provided by AWS-SDK.)
-    let (:topic) { OpenStruct.new(topic_arn: 'abcd:foo') }
-    let (:endpoint) { 'place.com' }
+    let(:topic) { Aws::SNS::Types::Topic.new(topic_arn: 'abcd:foo') }
+    let(:endpoint) { 'place.com' }
 
     context "when it already exists" do
       before { stub_calls(

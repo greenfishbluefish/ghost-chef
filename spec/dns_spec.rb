@@ -1,5 +1,5 @@
 describe GhostChef::Route53 do
-  let(:client) { described_class.class_variable_get('@@client') }
+  include_context :service
 
   let(:hz_call) { :list_hosted_zones_by_name }
   def hz_request(name)
@@ -157,7 +157,7 @@ describe GhostChef::Route53 do
 
   context '#ensure_dns_for_cloudfront' do
     let(:cf_domain) { 'cloudfront.aws.com' }
-    let(:cloudfront) { OpenStruct.new({domain_name: cf_domain}) }
+    let(:cloudfront) { Aws::CloudFront::Types::Distribution.new(domain_name: cf_domain) }
 
     context 'with no zones found' do
       before {stub_calls(

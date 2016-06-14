@@ -1,5 +1,5 @@
 describe GhostChef::Certificates do
-  let(:client) { described_class.class_variable_get('@@client') }
+  include_context :service
 
   context '#retrieve_certificate' do
     context "with no certificates" do

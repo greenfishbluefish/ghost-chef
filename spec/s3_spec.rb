@@ -1,5 +1,5 @@
 describe GhostChef::S3 do
-  let(:client) { described_class.class_variable_get('@@client') }
+  include_context :service
 
   describe '#bucket_exists' do
     context 'finds the bucket' do

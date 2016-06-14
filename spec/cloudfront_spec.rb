@@ -1,5 +1,5 @@
 describe GhostChef::Cloudfront do
-  let(:client) { described_class.class_variable_get('@@client') }
+  include_context :service
 
   def ld_response(opts)
     rv = {
@@ -277,7 +277,10 @@ describe GhostChef::Cloudfront do
 
         expect(
           described_class.ensure_distribution_for_s3(
-            bucket_name, acm_ssl: OpenStruct.new({certificate_arn: 'cert1'}),
+            bucket_name,
+            acm_ssl: Aws::ACM::Types::CertificateSummary.new(
+              certificate_arn: 'cert1',
+            ),
           )
         ).to descend_match(domain_name: "#{bucket_name}.s3.amazonaws.com")
       end
@@ -287,7 +290,7 @@ describe GhostChef::Cloudfront do
   # I don't understand how to stub out a waiter.
   xcontext '#waitfor_distribution_deployed' do
     it "returns true when successful" do
-      distro = OpenStruct.new({id: 'abcd'})
+      distro = Aws::CloudFront::Types::Distribution.new(id: 'abcd')
       allow_any_instance_of(Kernel).to receive(:sleep)
       stub_calls(
         [:wait_until, [:distribution_deployed, id: distro.id], true],

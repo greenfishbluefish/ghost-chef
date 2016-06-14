@@ -13,27 +13,28 @@ class GhostChef::IAM
     nil
   end
 
-=begin
+  ##
+  # This method will, given a role, iterate over all the policies attached to
+  # that role and return a hash of {name => arn}.
+  #
+  # It's unlikely you will ever need to call this method directly.
   def self.retrieve_attached_policies(role)
     attached_policies = {}
-    resp = @@client.list_attached_role_policies(
-      role_name: role.role_name,
-    )
-    resp.attached_policies.each do |policy|
-      attached_policies[policy.policy_name] = policy.policy_arn
-    end
 
-    while resp.is_truncated
-      resp = @@client.list_attached_role_policies(
-        role_name: role.role_name,
-        marker: resp.marker,
-      )
-      resp.attached_policies.each do |policy|
-        attached_policies[policy.policy_name] = policy.policy_arn
-      end
-    end
+    # This is a mild abuse of filter() in that we're using it as a map. But, it
+    # makes more sense to do this vs. reimplementing filter()'s core logic of
+    # iterating over subsequent calls to some method.
+    GhostChef::Util.filter(
+      @@client,
+      :list_attached_role_policies,
+      { role_name: role.role_name },
+      :attached_policies,
+      [ :marker, :marker ]
+    ) { |policy|
+      attached_policies[policy.policy_name] = policy.policy_arn
+      false
+    }
 
     return attached_policies
   end
-=end
 end
