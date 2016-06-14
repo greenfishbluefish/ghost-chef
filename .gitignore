@@ -2,3 +2,5 @@
 .*.sw?
 .vagrant
 coverage
+# Don't check this in for gem development
+Gemfile.lock

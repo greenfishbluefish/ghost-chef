@@ -18,14 +18,14 @@ module AwsStubs
     expectations.each do |slice|
       method = slice.shift.to_sym
       expectations = slice.pop
-      params = slice.first || {}
+      params = slice.flatten
 
       requests[method] ||= []
       requests[method].push(expectations)
       requests[method].flatten!
 
       expect(client).to receive(method)
-        .with(params)
+        .with(*params)
         .and_call_original
     end
 

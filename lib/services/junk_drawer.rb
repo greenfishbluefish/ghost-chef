@@ -4,7 +4,7 @@
 
 Everyone = '0.0.0.0/0'
 
-class Clients
+class GhostChef::Clients
   def self.asg
     @@asg ||= Aws::AutoScaling::Client.new
   end
@@ -28,10 +28,6 @@ class Clients
   def self.rds
     @@rds ||= Aws::RDS::Client.new
   end
-
-  def self.sns
-    @@sns ||= Aws::SNS::Client.new
-  end
 end
 
 def tags(override={})
@@ -54,20 +50,8 @@ def tags_from_hash(tags)
   }
 end
 
-# This method is used for those calls that don't provide their own filtering.
-def filter(client, method, args, key, &filter)
-  resp = client.send(method.to_sym, **args)
-  items = resp.send(key.to_sym).select(&filter)
-  while resp.next_token
-    resp = client.send(method.to_sym, **args.merge(next_token: resp.next_token))
-    items.concat!(resp.send(key.to_sym).select(&filter))
-  end
-  items
-end
-
-def retrieve_all(client, method, args, key)
-  filter(client, method, args, key) { true }
-end
+################################################################################
+# EC2
 
 def rules_from_hash(rules)
   rules.map do |e|
@@ -110,7 +94,7 @@ def ensure_security_group_rules(group, rules)
       to_revoke.push(rule) unless config_rules.include?(rule)
     end
     unless to_revoke.empty?
-      Clients.ec2.send("revoke_security_group_#{config_type}".to_sym, {
+      GhostChef::Clients.ec2.send("revoke_security_group_#{config_type}".to_sym, {
         group_id: group.group_id,
         ip_permissions: to_revoke.map {|e|
           x = e.to_h
@@ -127,7 +111,7 @@ def ensure_security_group_rules(group, rules)
       to_authorize.push(rule) unless aws_rules.include?(rule)
     end
     unless to_authorize.empty?
-      Clients.ec2.send("authorize_security_group_#{config_type}".to_sym, {
+      GhostChef::Clients.ec2.send("authorize_security_group_#{config_type}".to_sym, {
         group_id: group.group_id,
         ip_permissions: to_authorize.map {|e|
           x = e.to_h
@@ -142,7 +126,7 @@ def ensure_security_group_rules(group, rules)
 end
 
 def retrieve_security_group(vpc, name)
-  Clients.ec2.describe_security_groups(
+  GhostChef::Clients.ec2.describe_security_groups(
     filters: [
       { name: 'group-name', values: [name] },
       { name: 'vpc-id', values: [vpc.vpc_id] },
@@ -153,14 +137,14 @@ def ensure_security_group(vpc, name, description, tags={})
   secgrp = retrieve_security_group(vpc, name)
 
   unless secgrp
-    group_id = Clients.ec2.create_security_group(
+    group_id = GhostChef::Clients.ec2.create_security_group(
       group_name: name,
       description: description,
       vpc_id: vpc.vpc_id,
     ).group_id
 
     unless tags.empty?
-      Clients.ec2.create_tags(
+      GhostChef::Clients.ec2.create_tags(
         resources: [group_id],
         tags: tags_from_hash(tags),
       )
@@ -173,7 +157,7 @@ def ensure_security_group(vpc, name, description, tags={})
 end
 
 def retrieve_vpc(tags)
-  Clients.ec2.describe_vpcs(
+  GhostChef::Clients.ec2.describe_vpcs(
     filters: filters_from_hash(tags),
   ).vpcs[0]
 end
@@ -181,12 +165,12 @@ def ensure_vpc(cidr_block, tags)
   # Do we want to add a filter on the cidr_block as well?
   vpc = retrieve_vpc(tags)
   unless vpc
-    vpc = Clients.ec2.create_vpc(
+    vpc = GhostChef::Clients.ec2.create_vpc(
       cidr_block: cidr_block,
       instance_tenancy: 'default',
     ).vpc
 
-    Clients.ec2.create_tags(
+    GhostChef::Clients.ec2.create_tags(
       resources: [vpc.vpc_id],
       tags: tags_from_hash(tags),
     )
@@ -198,7 +182,7 @@ def ensure_vpc(cidr_block, tags)
 end
 
 def retrieve_subnet(vpc, zone)
-  subnet = Clients.ec2.describe_subnets(
+  subnet = GhostChef::Clients.ec2.describe_subnets(
     filters: [
       { name: 'vpc-id', values: [vpc.vpc_id] },
       { name: 'availability-zone', values: [zone] },
@@ -209,14 +193,14 @@ def ensure_subnet(vpc, zone, cidr_block, tags={})
   subnet = retrieve_subnet(vpc, zone)
 
   unless subnet
-    subnet = Clients.ec2.create_subnet(
+    subnet = GhostChef::Clients.ec2.create_subnet(
       vpc_id: vpc.vpc_id,
       cidr_block: cidr_block,
       availability_zone: zone,
     ).subnet
 
     unless tags.empty?
-      Clients.ec2.create_tags(
+      GhostChef::Clients.ec2.create_tags(
         resources: [subnet.subnet_id],
         tags: tags_from_hash(tags),
       )
@@ -229,7 +213,7 @@ def ensure_subnet(vpc, zone, cidr_block, tags={})
 end
 
 def retrieve_internet_gateway(tags)
-  Clients.ec2.describe_internet_gateways(
+  GhostChef::Clients.ec2.describe_internet_gateways(
     filters: filters_from_hash(tags),
   ).internet_gateways[0]
 end
@@ -237,10 +221,10 @@ def ensure_internet_gateway(tags)
   inet_gway = retrieve_internet_gateway(tags)
 
   unless inet_gway
-    inet_gway = Clients.ec2.create_internet_gateway(
+    inet_gway = GhostChef::Clients.ec2.create_internet_gateway(
     ).internet_gateway
 
-    Clients.ec2.create_tags(
+    GhostChef::Clients.ec2.create_tags(
       resources: [inet_gway.internet_gateway_id],
       tags: tags_from_hash(tags),
     )
@@ -260,7 +244,7 @@ def ensure_vpc_attached_gateway(vpc, inet_gway)
     end
   end
   unless vpc_is_attached
-    Clients.ec2.attach_internet_gateway(
+    GhostChef::Clients.ec2.attach_internet_gateway(
       internet_gateway_id: inet_gway.internet_gateway_id,
       vpc_id: vpc.vpc_id,
     )
@@ -268,7 +252,7 @@ def ensure_vpc_attached_gateway(vpc, inet_gway)
 end
 
 def retrieve_route_table(vpc)
-  Clients.ec2.describe_route_tables(
+  GhostChef::Clients.ec2.describe_route_tables(
     filters: [
       { name: 'vpc-id', values: [ vpc.vpc_id ] },
     ],
@@ -285,7 +269,7 @@ def ensure_vpc_routes_to_gateway(vpc, inet_gway)
   end
 
   unless gway_is_attached
-    Clients.ec2.create_route(
+    GhostChef::Clients.ec2.create_route(
       route_table_id: table.route_table_id,
       destination_cidr_block: '0.0.0.0/0',
       gateway_id: inet_gway.internet_gateway_id,
@@ -295,12 +279,15 @@ end
 
 def ensure_instances_are_launched(instances)
   unless instances.empty?
-    Clients.ec2.wait_until(
+    GhostChef::Clients.ec2.wait_until(
       :instance_running,
       instance_ids: instances.map {|e| e.instance_id },
     )
   end
 end
+
+################################################################################
+# ELB
 
 # This needs to ensure the ELB with that name has the right stuff:
 # * listeners
@@ -309,14 +296,14 @@ end
 # * tags
 # * other stuff?
 def retrieve_elb(name)
-  Clients.elb.describe_load_balancers(
+  GhostChef::Clients.elb.describe_load_balancers(
     load_balancer_names: [name],
   ).load_balancer_descriptions[0]
 end
 def ensure_elb(name, listeners, subnets, sec_grp, tags)
   retrieve_elb(name)
 rescue Aws::ElasticLoadBalancing::Errors::LoadBalancerNotFound
-  Clients.elb.create_load_balancer(
+  GhostChef::Clients.elb.create_load_balancer(
     load_balancer_name: name,
     listeners: listeners,
     subnets: subnets,
@@ -327,21 +314,24 @@ rescue Aws::ElasticLoadBalancing::Errors::LoadBalancerNotFound
   retrieve_elb(name)
 end
 def ensure_instances_in_service(elb, instances)
-  Clients.elb.wait_until(
+  GhostChef::Clients.elb.wait_until(
     :any_instance_in_service,
     load_balancer_name: elb.load_balancer_name,
     instances: instances.map {|e| { instance_id: e.instance_id } },
   )
 end
 
+################################################################################
+# IAM
+
 def retrieve_role(name)
-  Clients.iam.get_role(role_name: name).role
+  GhostChef::Clients.iam.get_role(role_name: name).role
 rescue Aws::IAM::Errors::NoSuchEntity
   nil
 end
 def retrieve_attached_policies(role)
   attached_policies = {}
-  resp = Clients.iam.list_attached_role_policies(
+  resp = GhostChef::Clients.iam.list_attached_role_policies(
     role_name: role.role_name,
   )
   resp.attached_policies.each do |policy|
@@ -349,7 +339,7 @@ def retrieve_attached_policies(role)
   end
 
   while resp.is_truncated
-    resp = Clients.iam.list_attached_role_policies(
+    resp = GhostChef::Clients.iam.list_attached_role_policies(
       role_name: role.role_name,
       marker: resp.marker,
     )
@@ -372,12 +362,12 @@ def ensure_role(name, options)
 
   role = retrieve_role(name)
   if role
-    Clients.iam.update_assume_role_policy(
+    GhostChef::Clients.iam.update_assume_role_policy(
       role_name: role.role_name,
       policy_document: assume_role_policy,
     )
   else
-    role = Clients.iam.create_role(
+    role = GhostChef::Clients.iam.create_role(
       role_name: name,
       assume_role_policy_document: assume_role_policy,
     ).role
@@ -393,7 +383,7 @@ def ensure_role(name, options)
     end
 
     # Attach the roles that should be there
-    Clients.iam.attach_role_policy(
+    GhostChef::Clients.iam.attach_role_policy(
       role_name: role.role_name,
       policy_arn: "arn:aws:iam::aws:policy/#{policy_name}",
     )
@@ -401,7 +391,7 @@ def ensure_role(name, options)
 
   # Remove the roles that should no longer be there
   attached_policies.each do |name, arn|
-    Clients.iam.detach_role_policy(
+    GhostChef::Clients.iam.detach_role_policy(
       role_name: role.role_name,
       policy_arn: arn,
     )
@@ -411,14 +401,14 @@ def ensure_role(name, options)
 end
 
 def retrieve_instance_profile(name)
-  Clients.iam.get_instance_profile(instance_profile_name: name).instance_profile
+  GhostChef::Clients.iam.get_instance_profile(instance_profile_name: name).instance_profile
 rescue Aws::IAM::Errors::NoSuchEntity
   nil
 end
 def ensure_instance_profile(name, options)
   instance_profile = retrieve_instance_profile(name)
   unless instance_profile
-    instance_profile = Clients.iam.create_instance_profile(
+    instance_profile = GhostChef::Clients.iam.create_instance_profile(
       instance_profile_name: name,
     ).instance_profile
   end
@@ -430,57 +420,63 @@ def ensure_instance_profile(name, options)
       next
     end
 
-    Clients.iam.add_role_to_instance_profile(
+    GhostChef::Clients.iam.add_role_to_instance_profile(
       instance_profile_name: instance_profile.instance_profile_name,
       role_name: role.role_name,
     )
   end
 
   attached_roles.each do |role_name, _|
-    Clients.iam.remove_role_from_instance_profile(
+    GhostChef::Clients.iam.remove_role_from_instance_profile(
       instance_profile_name: instance_profile.instance_profile_name,
       role_name: role_name,
     )
   end
 end
 
+################################################################################
+# EC2
+
 def retrieve_ami(id)
-  Clients.ec2.describe_images(
+  GhostChef::Clients.ec2.describe_images(
     image_ids: [id],
   ).images[0]
 end
 
 def retrieve_latest_ami(tags)
-  Clients.ec2.describe_images(
+  GhostChef::Clients.ec2.describe_images(
     filters: filters_from_hash(tags),
   ).images.sort_by {|e| e.creation_date}.last
 end
 
 def destroy_ami(ami)
   puts "  De-registering image"
-  Clients.ec2.deregister_image(
+  GhostChef::Clients.ec2.deregister_image(
     image_id: ami.image_id,
   )
 
   ami.block_device_mappings.each do |snapshot|
     if snapshot.ebs
       puts "  Destroying snapshot"
-      Clients.ec2.delete_snapshot(
+      GhostChef::Clients.ec2.delete_snapshot(
         snapshot_id: snapshot.ebs.snapshot_id,
       )
     end
   end
 end
 
+################################################################################
+# ASG
+
 def retrieve_launch_configuration(name)
-  Clients.asg.describe_launch_configurations(
+  GhostChef::Clients.asg.describe_launch_configurations(
     launch_configuration_names: [name]
   ).launch_configurations[0]
 end
 def ensure_launch_configuration(name, options)
   configuration = retrieve_launch_configuration(name)
   unless configuration
-    Clients.asg.create_launch_configuration(
+    GhostChef::Clients.asg.create_launch_configuration(
       launch_configuration_name: name,
       image_id: options[:image_id],
       security_groups: options[:security_groups],
@@ -496,17 +492,17 @@ end
 def retrieve_auto_scaling_groups(options)
   # Name is unique, so return just the one item
   if options.has_key? :name
-    return Clients.asg.describe_auto_scaling_groups(
+    return GhostChef::Clients.asg.describe_auto_scaling_groups(
       auto_scaling_group_names: [options[:name]]
     ).auto_scaling_groups[0]
   else
     # XXX: Convert this to use filter() above.
     # describe_auto_scaling_groups() does not provide a filtering mechanism, so
     # provide our own.
-    resp = Clients.asg.describe_auto_scaling_groups(max_records: 100)
+    resp = GhostChef::Clients.asg.describe_auto_scaling_groups(max_records: 100)
     groups = resp.auto_scaling_groups
     while resp.next_token
-      resp = Clients.asg.describe_auto_scaling_groups(
+      resp = GhostChef::Clients.asg.describe_auto_scaling_groups(
         max_records: 100,
         next_token: resp.next_token,
       )
@@ -531,7 +527,7 @@ def ensure_auto_scaling_group(name, options)
   auto_scaling_group = retrieve_auto_scaling_groups(name: name)
 
   unless auto_scaling_group
-    Clients.asg.create_auto_scaling_group(
+    GhostChef::Clients.asg.create_auto_scaling_group(
       auto_scaling_group_name: name,
       launch_configuration_name: options[:launch_configuration_name],
       min_size: options[:min_size],
@@ -550,12 +546,12 @@ def ensure_auto_scaling_group(name, options)
 end
 
 def detach_asg_from_elb(asg, elb)
-  Clients.asg.detach_load_balancers(
+  GhostChef::Clients.asg.detach_load_balancers(
     auto_scaling_group_name: asg.auto_scaling_group_name,
     load_balancer_names: [elb.load_balancer_name],
   )
   unless asg.instances.empty?
-    Clients.elb.wait_until(
+    GhostChef::Clients.elb.wait_until(
       :instance_deregistered,
       load_balancer_name: elb.load_balancer_name,
       instances: asg.instances.map {|e| { instance_id: e.instance_id } },
@@ -563,10 +559,13 @@ def detach_asg_from_elb(asg, elb)
   end
 end
 
+################################################################################
+# ASG, EC2
+
 def destroy_auto_scaling_group(asg)
   # Ensure that all instances are terminated and that the ASG no longer spawns instances
   puts "  Terminating all instances in ASG"
-  Clients.asg.update_auto_scaling_group(
+  GhostChef::Clients.asg.update_auto_scaling_group(
     auto_scaling_group_name: asg.auto_scaling_group_name,
     min_size: 0,
     max_size: 0,
@@ -574,7 +573,7 @@ def destroy_auto_scaling_group(asg)
   )
 
   unless asg.instances.empty?
-    Clients.ec2.wait_until(
+    GhostChef::Clients.ec2.wait_until(
       :instance_terminated,
       instance_ids: asg.instances.map {|e| e.instance_id },
     )
@@ -582,7 +581,7 @@ def destroy_auto_scaling_group(asg)
 
   launch_config_name = asg.launch_configuration_name
   puts "  Deleting ASG"
-  Clients.asg.delete_auto_scaling_group(
+  GhostChef::Clients.asg.delete_auto_scaling_group(
     auto_scaling_group_name: asg.auto_scaling_group_name,
     force_delete: true,
   )
@@ -591,7 +590,7 @@ def destroy_auto_scaling_group(asg)
 
   # We have to delete the launch configuration after the ASG
   puts "  Deleting launch-configuration"
-  Clients.asg.delete_launch_configuration(
+  GhostChef::Clients.asg.delete_launch_configuration(
     launch_configuration_name: launch_config_name,
   )
 
@@ -599,46 +598,8 @@ def destroy_auto_scaling_group(asg)
   destroy_ami(retrieve_ami(image_id))
 end
 
-def retrieve_topic(name)
-  filter(Clients.sns, :list_topics, {}, :topics) do |item|
-    item.topic_arn.match(/:#{name}$/)
-  end.first
-end
-def ensure_topic(name)
-  topic = retrieve_topic(name)
-  unless topic
-    Clients.sns.create_topic(name: name)
-    topic = retrieve_topic(name)
-  end
-  topic
-end
-
-def retrieve_subscription(topic, endpoint, protocol='https')
-  filter(
-    Clients.sns,
-    :list_subscriptions_by_topic,
-    {topic_arn: topic.topic_arn},
-    :subscriptions,
-  ) do |s|
-    s.endpoint == endpoint && s.protocol == protocol
-  end.first
-end
-def ensure_topic_subscription(topic, endpoint, protocol='https')
-  subscription = retrieve_subscription(topic, endpoint, protocol)
-  unless subscription
-    Clients.sns.subscribe(
-      topic_arn: topic.topic_arn,
-      protocol: protocol,
-      endpoint: endpoint,
-    )
-    subscription = retrieve_subscription(name, endpoint, protocol)
-
-    # Need to block until the subscription has been confirmed.
-    # or throw an error after a specific amount of time.
-  end
-
-  subscription
-end
+################################################################################
+# CloudWatch, EC2, RDS
 
 class CloudWatch
   def self.metrics
@@ -724,7 +685,7 @@ def ensure_alarm(params)
 
     # Verify the instance actually exists and find its instance_id.
     begin
-      reservations = Clients.ec2.describe_instances(
+      reservations = GhostChef::Clients.ec2.describe_instances(
         filters: [
           { name: 'tag:Name', values: [ opts[:name] ] },
         ],
@@ -761,7 +722,7 @@ def ensure_alarm(params)
 
     # Verify the instance actually exists.
     begin
-      Clients.rds.describe_db_instances(
+      GhostChef::Clients.rds.describe_db_instances(
         db_instance_identifier: opts[:name],
       )
     rescue Aws::RDS::Errors::DBInstanceNotFound
@@ -834,7 +795,7 @@ def ensure_alarm(params)
 
   # TODO: Add a check to see if the alarm already exists
   puts "Updating the #{name} alarm"
-  Clients.cloudwatch.put_metric_alarm(alarm_params)
+  GhostChef::Clients.cloudwatch.put_metric_alarm(alarm_params)
 
   # Verify the alarm goes into OK.
 end

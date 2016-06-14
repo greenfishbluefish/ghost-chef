@@ -1,20 +1,13 @@
-class Cloudfront
+##
+# This class manages all interaction with CloudFront, Amazon's CDN service.
+class GhostChef::Cloudfront
   @@client ||= Aws::CloudFront::Client.new
 
-  def self.filter(method, args, key, &filter)
-    resp = @@client.send(method.to_sym, **args).distribution_list
-    items = resp.send(key.to_sym).select(&filter)
-    while resp.next_marker
-      resp = @@client.send(
-        method.to_sym, **args.merge(marker: resp.next_marker)
-      ).distribution_list
-      items.concat!(resp.send(key.to_sym).select(&filter))
-    end
-    items
-  end
-
+  ##
+  # This method will, given a domain name, return a distribution that serves
+  # content for that name. If one does not exist, then it will return nil.
   def self.find_distribution_for_domain(domain)
-    filter(:list_distributions, {}, :items) do |item|
+    filter([:list_distributions, :distribution_list], {}, :items) do |item|
       domain_not_found = item.origins.items.select do |origin|
         origin.domain_name == domain
       end.empty?
@@ -22,6 +15,17 @@ class Cloudfront
     end.first
   end
 
+  ##
+  # This method will, given a bucket, ensure that a distribution exists for that
+  # S3 bucket. If it does not exist, one will be created using the provided
+  # opts, then returned.
+  #
+  # The opts can contain:
+  # * aliases: Alternate DNS names that resolve to this bucket.
+  #   * The default is [].
+  # * acm_ssl: This is an ACM object representing the certificate.
+  #   * Use the return value from GhostChef::Certificates.ensure_certificate().
+  #   * If this is not provided, then the bucket will be served over HTTP.
   def self.ensure_distribution_for_s3(bucket, opts={})
     distro = find_distribution_for_domain("#{bucket}.s3.amazonaws.com")
     unless distro
@@ -96,5 +100,13 @@ class Cloudfront
     puts "\t(This can take up to 20 minutes.)"
 
     @@client.wait_until(:distribution_deployed, id: distro.id)
+  end
+
+  private
+
+  def self.filter(methods, args, key, &filter)
+    GhostChef::Util.filter(
+      @@client, methods, args, key, [:next_marker, :marker], &filter
+    )
   end
 end

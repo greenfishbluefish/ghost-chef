@@ -1,27 +1,52 @@
-class Route53
+##
+# This class manages all interaction with Route53, Amazon's DNS service.
+class GhostChef::Route53
   @@client ||= Aws::Route53::Client.new
 
+  ##
+  # This method returns the AWS Route53 Zone for a given domain name, if one
+  # exists.
   def self.zone_for_name(name)
     tld = /([^.]*\.[^.]*)$/.match(name)[1]
     @@client.list_hosted_zones_by_name(
       dns_name: tld,
       max_items: 1,
-    ).hosted_zones[0]
+    ).hosted_zones.first
   end
 
+  #--
+  # These are taken from AWS documentation.
+  # TODO: Figure out how to look these up on-demand.
+  #++
+  @@hosted_zone_ids = {
+    S3: {
+      'us-east-1': 'Z3AQBSTGFYJSTF',
+    },
+    CloudFront: {
+      'us-east-1': 'Z2FDTNDATAQYW2',
+    },
+  }
+
+  ##
+  # This method will ensure that a DNS record exists for a S3 bucket. The S3
+  # bucket needs to be named with the DNS name you wish to use. For example, if
+  # you want to serve the static website 'www.foo.com', then you will need to
+  # name the S3 bucket 'www.foo.com'.
   def self.ensure_dns_for_s3(name)
-		# S3/us-east-1: Z3AQBSTGFYJSTF
     self.ensure_dns_for(name, 'S3',
-			hosted_zone_id: 'Z3AQBSTGFYJSTF',
+			hosted_zone_id: @@hosted_zone_ids[:S3][:'us-east-1'],
 			dns_name: 's3-website-us-east-1.amazonaws.com',
 			evaluate_target_health: true,
     )
   end
 
+  ##
+  # This method will ensure that a DNS record exists for a CloudFront
+  # distribution. The CloudFront domain will need to be aware that it is serving
+  # content for this domain name.
   def self.ensure_dns_for_cloudfront(name, distro)
-		# CF/us-east-1: Z2FDTNDATAQYW2
     self.ensure_dns_for(name, 'CloudFront',
-			hosted_zone_id: 'Z2FDTNDATAQYW2',
+			hosted_zone_id: @@hosted_zone_ids[:CloudFront][:'us-east-1'],
 			dns_name: distro.domain_name,
 			evaluate_target_health: false,
     )

@@ -1,5 +1,5 @@
-describe ElasticSearch do
-  let(:client) { ElasticSearch.class_variable_get('@@client') }
+describe GhostChef::ElasticSearch do
+  let(:client) { GhostChef::ElasticSearch.class_variable_get('@@client') }
   let(:domain) { 'foo.bar.dev' }
 
   def build_request
@@ -33,29 +33,22 @@ describe ElasticSearch do
     context "when it doesn't exist" do
       before { stub_calls(retrieve_not_found) }
       it "returns false" do
-        expect(ElasticSearch.retrieve(domain)).to be false
+        expect(GhostChef::ElasticSearch.retrieve(domain)).to be nil
       end
     end
 
     context "when it exists" do
       before { stub_calls(retrieve_found) }
       it "returns the domain" do
-        expect(ElasticSearch.retrieve(domain)).to be_truthy
+        expect(GhostChef::ElasticSearch.retrieve(domain)).to be_truthy
       end
     end
 
     context "when it is being deleted" do
       before { stub_calls(retrieve_found(deleted: true)) }
       it "throws an error" do
-        expect{ElasticSearch.retrieve(domain)}.to raise_error "This domain is currently being deleted"
+        expect{GhostChef::ElasticSearch.retrieve(domain)}.to raise_error GhostChef::Error, "This domain is currently being deleted"
       end
-    end
-  end
-
-  describe '#create' do
-    before { stub_calls(create_new, retrieve_found) }
-    it "returns the domain" do
-      expect(ElasticSearch.create(domain)).to be_truthy
     end
   end
 
@@ -63,115 +56,48 @@ describe ElasticSearch do
     context 'when it already exists' do
       before { stub_calls(retrieve_found) }
       it "returns the domain" do
-        expect(ElasticSearch.ensure(domain)).to be_truthy
+        expect(GhostChef::ElasticSearch.ensure(domain)).to be_truthy
       end
     end
     context "when it doesn't already exist" do
       before { stub_calls(retrieve_not_found, create_new, retrieve_found) }
       it "returns the domain" do
-        expect(ElasticSearch.ensure(domain)).to be_truthy
-      end
-    end
-  end
-
-  describe '#processing?' do
-    context "when it doesn't exist" do
-      before { stub_calls(retrieve_not_found) }
-      it "throws an error" do
-        expect{ElasticSearch.processing?(domain)}.to raise_error "Elasticsearch domain not found"
-      end
-    end
-
-    context "when it is processing" do
-      before { stub_calls(retrieve_found(processing: true)) }
-      it "returns true" do
-        expect(ElasticSearch.processing?(domain)).to be_truthy
-      end
-    end
-
-    context "when it isn't processing" do
-      before { stub_calls(retrieve_found(processing: false)) }
-      it "returns true" do
-        expect(ElasticSearch.processing?(domain)).to be_falsy
-      end
-    end
-  end
-
-  describe '#endpoint' do
-    context "when it doesn't exist" do
-      before { stub_calls(retrieve_not_found) }
-      it "throws an error" do
-        expect{ElasticSearch.endpoint(domain)}.to raise_error "Elasticsearch domain not found"
-      end
-    end
-
-    context "when it has an endpoint" do
-      before { stub_calls(retrieve_found(endpoint: 'foo.bar.com')) }
-      it "returns the endpoint" do
-        expect(ElasticSearch.endpoint(domain)).to eql 'foo.bar.com'
-      end
-    end
-
-    context "when it doesn't have an endpoint" do
-      before { stub_calls(retrieve_found) }
-      it "returns true" do
-        expect(ElasticSearch.endpoint(domain)).to be_falsy
-      end
-    end
-  end
-
-  describe '#endpoint_available?' do
-    context "when it doesn't exist" do
-      before { stub_calls(retrieve_not_found) }
-      it "throws an error" do
-        expect{ElasticSearch.endpoint_available?(domain)}.to raise_error "Elasticsearch domain not found"
-      end
-    end
-
-    context "when it has an endpoint" do
-      before { stub_calls(retrieve_found(endpoint: 'foo.bar.com')) }
-      it "returns true" do
-        expect(ElasticSearch.endpoint_available?(domain)).to be true
-      end
-    end
-
-    context "when it doesn't have an endpoint" do
-      before { stub_calls(retrieve_found) }
-      it "returns true" do
-        expect(ElasticSearch.endpoint_available?(domain)).to be_falsy
+        expect(GhostChef::ElasticSearch.ensure(domain)).to be_truthy
       end
     end
   end
 
   describe '#ensure_endpoint_available' do
+    context "when it doesn't exist" do
+      before { stub_calls(retrieve_not_found) }
+      it "throws an error" do
+        expect{GhostChef::ElasticSearch.ensure_endpoint_available(domain)}.to raise_error GhostChef::Error, "Domain does not exist"
+      end
+    end
+
     sleeping_msg = "Elasticsearch domain is still processing...\n"
     context "it exists with an endpoint" do
       before {
-        allow(ElasticSearch).to receive(:sleep).with(30).exactly(0).times
+        allow(GhostChef::ElasticSearch).to receive(:sleep).with(30).exactly(0).times
       }
       before { stub_calls(
-        retrieve_found(processing: false),
-        retrieve_found(endpoint: 'foo.bar.com'),
-        retrieve_found(endpoint: 'foo.bar.com'),
+        retrieve_found(processing: false, endpoint: 'foo.bar.com'),
       ) }
       it "returns the endpoint" do
-        expect(ElasticSearch.ensure_endpoint_available(domain)).to eql 'foo.bar.com'
+        expect(GhostChef::ElasticSearch.ensure_endpoint_available(domain)).to eql 'foo.bar.com'
       end
     end
 
     context "it exists without an endpoint, then with an endpoint" do
       before { stub_calls(
-        retrieve_found(processing: false),
-        retrieve_found(endpoint: nil),
+        retrieve_found(processing: false, endpoint: nil),
         # Sleep here
-        retrieve_found(processing: false),
-        retrieve_found(endpoint: 'foo.bar.com'),
-        retrieve_found(endpoint: 'foo.bar.com'),
+        retrieve_found(processing: false, endpoint: 'foo.bar.com'),
       ) }
       it "returns the endpoint" do
-        expect(ElasticSearch).to receive(:sleep).with(30).exactly(1).times
+        expect(GhostChef::ElasticSearch).to receive(:sleep).with(30).exactly(1).times
         expect{
-          expect(ElasticSearch.ensure_endpoint_available(domain)).to eql 'foo.bar.com'
+          expect(GhostChef::ElasticSearch.ensure_endpoint_available(domain)).to eql 'foo.bar.com'
         }.to output(sleeping_msg).to_stdout
       end
     end
@@ -180,17 +106,14 @@ describe ElasticSearch do
       before { stub_calls(
         retrieve_found(processing: true),
         # Sleep here
-        retrieve_found(processing: false),
-        retrieve_found(endpoint: nil),
+        retrieve_found(processing: false, endpoint: nil),
         # Sleep here
-        retrieve_found(processing: false),
-        retrieve_found(endpoint: 'foo.bar.com'),
-        retrieve_found(endpoint: 'foo.bar.com'),
+        retrieve_found(processing: false, endpoint: 'foo.bar.com'),
       ) }
       it "returns the endpoint" do
-        expect(ElasticSearch).to receive(:sleep).with(30).exactly(2).times
+        expect(GhostChef::ElasticSearch).to receive(:sleep).with(30).exactly(2).times
         expect{
-          expect(ElasticSearch.ensure_endpoint_available(domain)).to eql 'foo.bar.com'
+          expect(GhostChef::ElasticSearch.ensure_endpoint_available(domain)).to eql 'foo.bar.com'
         }.to output(sleeping_msg + sleeping_msg).to_stdout
       end
     end

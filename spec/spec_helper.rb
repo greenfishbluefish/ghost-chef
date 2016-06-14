@@ -1,20 +1,22 @@
 require 'simplecov'
 SimpleCov.start do
   add_filter '/spec/'
-  minimum_coverage 36
-  minimum_coverage_by_file 19
+  minimum_coverage 47
+  minimum_coverage_by_file 17
   refuse_coverage_drop
 end
 
 # Because the clients are created eagerly (upon class load), we have to set the
-# AWS SDK to stubbed before we load aws-idempotency.
+# AWS SDK to stubbed before we load ghost-chef.
 require 'aws-sdk'
 Aws.config.update({
   stub_responses: true,
 })
 
-require 'aws-idempotency'
+# Code under test, located in /lib/
+require 'ghost-chef'
 
+# Helpers, located in /spec/
 require 'aws_stubbing'
 
 RSpec.configure do |config|
