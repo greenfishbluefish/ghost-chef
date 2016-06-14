@@ -33,10 +33,10 @@ describe GhostChef::Util do
       }
 
       it "returns no values when filter is closed" do
-        expect(GhostChef::Util.filter(obj, :method, {}, :key1, [ :check, :next ]) { false }).to eql []
+        expect(described_class.filter(obj, :method, {}, :key1, [ :check, :next ]) { false }).to eql []
       end
       it "returns no values when filter is open" do
-        expect(GhostChef::Util.filter(obj, :method, {}, :key1, [ :check, :next ]) { true }).to eql []
+        expect(described_class.filter(obj, :method, {}, :key1, [ :check, :next ]) { true }).to eql []
       end
     end
 
@@ -50,10 +50,10 @@ describe GhostChef::Util do
       }
 
       it "returns no values when filter is closed" do
-        expect(GhostChef::Util.filter(obj, :method, {}, :key1, [ :check, :next ]) { false }).to eql []
+        expect(described_class.filter(obj, :method, {}, :key1, [ :check, :next ]) { false }).to eql []
       end
       it "returns all values when filter is open" do
-        expect(GhostChef::Util.filter(obj, :method, {}, :key1, [ :check, :next ]) { true }).to eql ['a']
+        expect(described_class.filter(obj, :method, {}, :key1, [ :check, :next ]) { true }).to eql ['a']
       end
     end
 
@@ -72,12 +72,12 @@ describe GhostChef::Util do
 
       it "returns all values when filter is open" do
         expect(
-          GhostChef::Util.filter(obj, :method, {}, :key1, [ :check, :next ]) { true }
+          described_class.filter(obj, :method, {}, :key1, [ :check, :next ]) { true }
         ).to eql ['a', 'b', 'c']
       end
       it "returns no values when filter is closed" do
         expect(
-          GhostChef::Util.filter(obj, :method, {}, :key1, [ :check, :next ]) { false }
+          described_class.filter(obj, :method, {}, :key1, [ :check, :next ]) { false }
         ).to eql []
       end
     end
@@ -99,12 +99,12 @@ describe GhostChef::Util do
 
       it "returns all values when filter is open" do
         expect(
-          GhostChef::Util.filter(obj, :method, {}, :key1, [ :check, :next ]) { true }
+          described_class.filter(obj, :method, {}, :key1, [ :check, :next ]) { true }
         ).to eql ['a', 'b', 'c', 'd', 'e']
       end
       it "returns no values when filter is closed" do
         expect(
-          GhostChef::Util.filter(obj, :method, {}, :key1, [ :check, :next ]) { false }
+          described_class.filter(obj, :method, {}, :key1, [ :check, :next ]) { false }
         ).to eql []
       end
     end
@@ -122,10 +122,10 @@ describe GhostChef::Util do
         }
 
         it "returns no values when filter is closed" do
-          expect(GhostChef::Util.filter(obj, [:method, :key1], {}, :key2, [ :check, :next ]) { false }).to eql []
+          expect(described_class.filter(obj, [:method, :key1], {}, :key2, [ :check, :next ]) { false }).to eql []
         end
         it "returns all values when filter is open" do
-          expect(GhostChef::Util.filter(obj, [:method, :key1], {}, :key2, [ :check, :next ]) { true }).to eql ['a']
+          expect(described_class.filter(obj, [:method, :key1], {}, :key2, [ :check, :next ]) { true }).to eql ['a']
         end
       end
 
@@ -157,12 +157,12 @@ describe GhostChef::Util do
 
         it "returns all values when filter is open" do
           expect(
-            GhostChef::Util.filter(obj, %w(method key1 key2), {}, %w(key3), [ :check, :next ]) { true }
+            described_class.filter(obj, %w(method key1 key2), {}, %w(key3), [ :check, :next ]) { true }
           ).to eql ['a', 'b', 'c', 'd', 'e']
         end
         it "returns no values when filter is closed" do
           expect(
-            GhostChef::Util.filter(obj, %w(method key1 key2), {}, %w(key3), [ :check, :next ]) { false }
+            described_class.filter(obj, %w(method key1 key2), {}, %w(key3), [ :check, :next ]) { false }
           ).to eql []
         end
       end
@@ -179,10 +179,10 @@ describe GhostChef::Util do
         }
 
         it "returns no values when filter is closed" do
-          expect(GhostChef::Util.filter(obj, :method, {}, [:key1, :key2], [ :check, :next ]) { false }).to eql []
+          expect(described_class.filter(obj, :method, {}, [:key1, :key2], [ :check, :next ]) { false }).to eql []
         end
         it "returns all values when filter is open" do
-          expect(GhostChef::Util.filter(obj, :method, {}, [:key1, :key2], [ :check, :next ]) { true }).to eql ['a']
+          expect(described_class.filter(obj, :method, {}, [:key1, :key2], [ :check, :next ]) { true }).to eql ['a']
         end
       end
 
@@ -214,12 +214,12 @@ describe GhostChef::Util do
 
         it "returns all values when filter is open" do
           expect(
-            GhostChef::Util.filter(obj, :method, {}, %w(key1 key2 key3), [ :check, :next ]) { true }
+            described_class.filter(obj, :method, {}, %w(key1 key2 key3), [ :check, :next ]) { true }
           ).to eql ['a', 'b', 'c', 'd', 'e']
         end
         it "returns no values when filter is closed" do
           expect(
-            GhostChef::Util.filter(obj, :method, {}, %w(key1 key2 key3), [ :check, :next ]) { false }
+            described_class.filter(obj, :method, {}, %w(key1 key2 key3), [ :check, :next ]) { false }
           ).to eql []
         end
       end
