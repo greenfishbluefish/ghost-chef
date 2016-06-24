@@ -13,8 +13,8 @@ class GhostChef::IAM
     nil
   end
 
-  def self.ensure_role(name, options)
-    assume_role_policy = JSON.generate({
+  def self.role_policy(options={})
+    JSON.generate({
       "Version" => "2012-10-17",
       "Statement" => {
         "Effect" => "Allow",
@@ -22,6 +22,10 @@ class GhostChef::IAM
         "Action" => "sts:AssumeRole",
       },
     })
+  end
+
+  def self.ensure_role(name, options={})
+    assume_role_policy = role_policy(options)
 
     role = retrieve_role(name)
     if role
@@ -36,29 +40,7 @@ class GhostChef::IAM
       ).role
     end
 
-    attached_policies = retrieve_attached_policies(role)
-
-    options[:policies].each do |policy_name|
-      # Ignore the roles that are there and should be there
-      if attached_policies[policy_name]
-        attached_policies.delete(policy_name)
-        next
-      end
-
-      # Attach the roles that should be there
-      @@client.attach_role_policy(
-        role_name: role.role_name,
-        policy_arn: "arn:aws:iam::aws:policy/#{policy_name}",
-      )
-    end
-
-    # Remove the roles that should no longer be there
-    attached_policies.each do |name, arn|
-      @@client.detach_role_policy(
-        role_name: role.role_name,
-        policy_arn: arn,
-      )
-    end
+    ensure_attached_policies(role, options[:policies]) if options[:policies]
 
     return role
   end
@@ -86,6 +68,34 @@ class GhostChef::IAM
     }
 
     return attached_policies
+  end
+
+  def self.ensure_attached_policies(role, policies={})
+    attached_policies = retrieve_attached_policies(role)
+
+    options[:policies].each do |policy_name|
+      # Ignore the roles that are there and should be there
+      if attached_policies[policy_name]
+        attached_policies.delete(policy_name)
+        next
+      end
+
+      # Attach the roles that should be there
+      @@client.attach_role_policy(
+        role_name: role.role_name,
+        policy_arn: "arn:aws:iam::aws:policy/#{policy_name}",
+      )
+    end
+
+    # Remove the roles that should no longer be there
+    attached_policies.each do |name, arn|
+      @@client.detach_role_policy(
+        role_name: role.role_name,
+        policy_arn: arn,
+      )
+    end
+
+    return true
   end
 
   ##
