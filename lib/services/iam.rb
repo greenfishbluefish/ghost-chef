@@ -34,8 +34,8 @@ class GhostChef::IAM
   # create it.
   #
   # Options:
-  #   * policies: If a set of policies are provided, ensure_attached_policies()
-  #     will be called for you. Please see that method for more details.
+  #   * policies: If a list of policy names are provided, then this will call
+  #     ensure_attached_policies(). Please see that method for more details.
   def self.ensure_role(name, options={})
     assume_role_policy = role_policy(options)
 
@@ -92,6 +92,9 @@ class GhostChef::IAM
   #
   # If you provide no policy names, this **WILL REMOVE ALL ATTACHED POLICIES**.
   # You have been warned.
+  #
+  # It's unlikely you will ever need to call this method directly. It is called
+  # by ensure_role().
   def self.ensure_attached_policies(role, policies=[])
     attached_policies = retrieve_attached_policies(role)
 
@@ -131,32 +134,74 @@ class GhostChef::IAM
     nil
   end
 
-  def self.ensure_instance_profile(name, options)
-    instance_profile = retrieve_instance_profile(name)
-    unless instance_profile
-      instance_profile = @@client.create_instance_profile(
+  ##
+  # This method will, given an instance profile name and some options, retrieve
+  # that instance profile or create it.
+  #
+  # Options:
+  #   * roles: If a set of roles/role names are given, ensure_attached_roles()
+  #     will be called for you. Please see that method for more details.
+  def self.ensure_instance_profile(name, options={})
+    profile = retrieve_instance_profile(name)
+    unless profile
+      profile = @@client.create_instance_profile(
         instance_profile_name: name,
       ).instance_profile
     end
 
-    attached_roles = instance_profile.roles.map{|e| [e.role_name, true]}.to_h
-    options[:roles].each do |role|
-      if attached_roles[role.role_name]
-        attached_roles.delete(role.role_name)
+    ensure_attached_roles(profile, options[:roles]) if options[:roles]
+
+    return profile
+  end
+
+  ##
+  # This method will, given an instance profile, iterate over all the roles
+  # attached to that instance profile and return a hash of {name => true}.
+  #
+  # It's unlikely you will ever need to call this method directly. It is called
+  # by ensure_instance_profile().
+  def self.retrieve_attached_roles(profile)
+    profile.roles.map{|e| [e.role_name, true]}.to_h
+  end
+
+  ##
+  # This method will, given an instance profile and an array of desired roles
+  # (or role names), iterate over all the roles attached to that instance
+  # profile and ensure that the roles are exactly what you have specified.
+  #
+  # This method will add or remove roles as required. The correlation is by
+  # role name and is case-sensitive.
+  #
+  # If you provide no roles, this **WILL REMOVE ALL ATTACHED ROLES**.
+  # You have been warned.
+  #
+  # It's unlikely you will ever need to call this method directly. It is called
+  # by ensure_instance_profile().
+  def self.ensure_attached_roles(profile, roles=[])
+    attached_roles = retrieve_attached_roles(profile)
+
+    roles.each do |name|
+      # Normalize to the role name
+      name = role.role_name unless name.is_a? String
+
+      if attached_roles[name]
+        attached_roles.delete(name)
         next
       end
 
       @@client.add_role_to_instance_profile(
-        instance_profile_name: instance_profile.instance_profile_name,
-        role_name: role.role_name,
+        instance_profile_name: profile.instance_profile_name,
+        role_name: name,
       )
     end
 
-    attached_roles.each do |role_name, _|
+    attached_roles.each do |name, _|
       @@client.remove_role_from_instance_profile(
-        instance_profile_name: instance_profile.instance_profile_name,
-        role_name: role_name,
+        instance_profile_name: profile.instance_profile_name,
+        role_name: name,
       )
     end
+
+    return true
   end
 end

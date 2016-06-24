@@ -268,4 +268,18 @@ describe GhostChef::IAM do
       end
     end
   end
+
+  describe '#ensure_instance_profile' do
+  end
+
+  describe '#retrieve_attached_roles' do
+    let(:profile) { Aws::IAM::Types::InstanceProfile.new(instance_profile_name: 'abcd') }
+
+    it 'has a name' do
+      expect(profile).to descend_match(instance_profile_name: 'abcd')
+    end
+  end
+
+  describe '#ensure_attached_roles' do
+  end
 end
