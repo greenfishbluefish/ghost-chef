@@ -21,10 +21,6 @@ class GhostChef::Clients
     @@elb ||= Aws::ElasticLoadBalancing::Client.new
   end
 
-  def self.iam
-    @@iam ||= Aws::IAM::Client.new
-  end
-
   def self.rds
     @@rds ||= Aws::RDS::Client.new
   end
@@ -319,88 +315,6 @@ def ensure_instances_in_service(elb, instances)
     load_balancer_name: elb.load_balancer_name,
     instances: instances.map {|e| { instance_id: e.instance_id } },
   )
-end
-
-################################################################################
-# IAM
-
-def ensure_role(name, options)
-  assume_role_policy = JSON.generate({
-    "Version" => "2012-10-17",
-    "Statement" => {
-      "Effect" => "Allow",
-      "Principal" => {"Service" => "ec2.amazonaws.com"},
-      "Action" => "sts:AssumeRole",
-    },
-  })
-
-  role = retrieve_role(name)
-  if role
-    GhostChef::Clients.iam.update_assume_role_policy(
-      role_name: role.role_name,
-      policy_document: assume_role_policy,
-    )
-  else
-    role = GhostChef::Clients.iam.create_role(
-      role_name: name,
-      assume_role_policy_document: assume_role_policy,
-    ).role
-  end
-
-  attached_policies = retrieve_attached_policies(role)
-
-  options[:policies].each do |policy_name|
-    # Ignore the roles that are there and should be there
-    if attached_policies[policy_name]
-      attached_policies.delete(policy_name)
-      next
-    end
-
-    # Attach the roles that should be there
-    GhostChef::Clients.iam.attach_role_policy(
-      role_name: role.role_name,
-      policy_arn: "arn:aws:iam::aws:policy/#{policy_name}",
-    )
-  end
-
-  # Remove the roles that should no longer be there
-  attached_policies.each do |name, arn|
-    GhostChef::Clients.iam.detach_role_policy(
-      role_name: role.role_name,
-      policy_arn: arn,
-    )
-  end
-
-  return role
-end
-
-def ensure_instance_profile(name, options)
-  instance_profile = retrieve_instance_profile(name)
-  unless instance_profile
-    instance_profile = GhostChef::Clients.iam.create_instance_profile(
-      instance_profile_name: name,
-    ).instance_profile
-  end
-
-  attached_roles = instance_profile.roles.map{|e| [e.role_name, true]}.to_h
-  options[:roles].each do |role|
-    if attached_roles[role.role_name]
-      attached_roles.delete(role.role_name)
-      next
-    end
-
-    GhostChef::Clients.iam.add_role_to_instance_profile(
-      instance_profile_name: instance_profile.instance_profile_name,
-      role_name: role.role_name,
-    )
-  end
-
-  attached_roles.each do |role_name, _|
-    GhostChef::Clients.iam.remove_role_from_instance_profile(
-      instance_profile_name: instance_profile.instance_profile_name,
-      role_name: role_name,
-    )
-  end
 end
 
 ################################################################################

@@ -1,4 +1,4 @@
-require File.expand_path('../lib/ghost-chef', __FILE__)
+require File.expand_path('../lib/ghost-chef/version', __FILE__)
 
 Gem::Specification.new do |gem|
   gem.name = 'ghost-chef'

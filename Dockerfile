@@ -4,7 +4,9 @@ MAINTAINER rob.kinyon@gmail.com
 RUN apt-get update -qq \
   && apt-get install -y build-essential 
 
-COPY Gemfile* /tmp/
+RUN mkdir -p /tmp/lib/ghost-chef
+COPY Gemfile* ghost-chef.gemspec /tmp/
+COPY lib/ghost-chef/version.rb /tmp/lib/ghost-chef
 WORKDIR /tmp
 RUN bundle install
 
