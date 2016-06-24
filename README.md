@@ -39,3 +39,10 @@ You will also need to do this if the Gemfile ever changes.
 * Remove all untagged images:
   * `docker rmi $(docker images | grep "^<none>" | awk '{print $3}')`
   * Useful if you built without tagging
+
+# TODO
+
+- General
+  - [ ] Ensure in the test suite that additional calls to the AWS SDK are flagged as an error
+- IAM
+  - [ ] Provide a way of setting the assume role policy document.

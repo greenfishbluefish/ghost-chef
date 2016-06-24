@@ -13,6 +13,11 @@ class GhostChef::IAM
     nil
   end
 
+  ##
+  # This method will provide an assume role policy document, required by
+  # ensure_role().
+  #
+  # It's unlikely you will ever need to call this method directly.
   def self.role_policy(options={})
     JSON.generate({
       "Version" => "2012-10-17",
@@ -24,6 +29,13 @@ class GhostChef::IAM
     })
   end
 
+  ##
+  # This method will, given a role name and some options, retrieve that role or
+  # create it.
+  #
+  # Options:
+  #   * policies: If a set of policies are provided, ensure_attached_policies()
+  #     will be called for you. Please see that method for more details.
   def self.ensure_role(name, options={})
     assume_role_policy = role_policy(options)
 
@@ -70,10 +82,20 @@ class GhostChef::IAM
     return attached_policies
   end
 
-  def self.ensure_attached_policies(role, policies={})
+  ##
+  # This method will, given a role and an array of desired policy names, iterate
+  # over all the policies attached to that role and ensure that the policies are
+  # exactly what you have specified.
+  #
+  # This method will add or remove policies as required. The correlation is by
+  # policy name and is case-sensitive.
+  #
+  # If you provide no policy names, this **WILL REMOVE ALL ATTACHED POLICIES**.
+  # You have been warned.
+  def self.ensure_attached_policies(role, policies=[])
     attached_policies = retrieve_attached_policies(role)
 
-    options[:policies].each do |policy_name|
+    policies.each do |policy_name|
       # Ignore the roles that are there and should be there
       if attached_policies[policy_name]
         attached_policies.delete(policy_name)

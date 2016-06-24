@@ -29,6 +29,14 @@ describe GhostChef::IAM do
     }
   end
 
+  def attached_policies_response(policy_names, addl={})
+    return {
+      attached_policies: policy_names.map {|n| {
+        policy_name: n, policy_arn: "arn:aws:iam::aws:policy/#{n}",
+      }},
+    }.merge(addl)
+  end
+
   describe '#retrieve_role' do
     context "when the role doesn't exist" do
       before { stub_calls([:get_role, {role_name: role_name}, 'NoSuchEntity']) }
@@ -91,77 +99,156 @@ describe GhostChef::IAM do
 
     context 'when the role has 1 attached policies' do
       before {stub_calls(
-        [:list_attached_role_policies, {role_name: role_name}, {
-          attached_policies: [
-            { policy_arn: 'arn:p1', policy_name: 'p1' },
-          ]
-        }]
+        [:list_attached_role_policies, {role_name: role_name}, attached_policies_response(['p1']), ]
       )}
       it "returns 1 policy mapping" do
         expect(described_class.retrieve_attached_policies(role)).to eql({
-          'p1' => 'arn:p1',
+          'p1' => 'arn:aws:iam::aws:policy/p1',
         })
       end
     end
 
     context 'when the role has 1+1 attached policies' do
       before {stub_calls(
-        [:list_attached_role_policies, {role_name: role_name}, {
-          attached_policies: [
-            { policy_arn: 'arn:p1', policy_name: 'p1' },
-          ],
-          is_truncated: true,
-          marker: 'abcd',
-        }],
-        [:list_attached_role_policies, {role_name: role_name, marker: 'abcd'}, {
-          attached_policies: [
-            { policy_arn: 'arn:p2', policy_name: 'p2' },
-          ],
-        }],
+        [:list_attached_role_policies, {role_name: role_name}, attached_policies_response(['p1'], is_truncated: true, marker: 'abcd')],
+        [:list_attached_role_policies, {role_name: role_name, marker: 'abcd'}, attached_policies_response(['p2'])],
       )}
       it "returns 1 policy mapping" do
         expect(described_class.retrieve_attached_policies(role)).to eql({
-          'p1' => 'arn:p1',
-          'p2' => 'arn:p2',
+          'p1' => 'arn:aws:iam::aws:policy/p1',
+          'p2' => 'arn:aws:iam::aws:policy/p2',
         })
       end
     end
 
     context 'when the role has 1+1+1 attached policies' do
       before {stub_calls(
-        [:list_attached_role_policies, {role_name: role_name}, {
-          attached_policies: [
-            { policy_arn: 'arn:p1', policy_name: 'p1' },
-          ],
-          is_truncated: true,
-          marker: 'abcd',
-        }],
-        [:list_attached_role_policies, {role_name: role_name, marker: 'abcd'}, {
-          attached_policies: [
-            { policy_arn: 'arn:p2', policy_name: 'p2' },
-          ],
-          is_truncated: true,
-          marker: 'efgh',
-        }],
-        [:list_attached_role_policies, {role_name: role_name, marker: 'efgh'}, {
-          attached_policies: [
-            { policy_arn: 'arn:p3', policy_name: 'p3' },
-          ],
-        }],
+        [:list_attached_role_policies, {role_name: role_name},
+          attached_policies_response(['p1'],
+            is_truncated: true,
+            marker: 'abcd',
+        )],
+        [:list_attached_role_policies, {role_name: role_name, marker: 'abcd'},
+          attached_policies_response(['p2'],
+            is_truncated: true,
+            marker: 'efgh',
+        )],
+        [:list_attached_role_policies, {role_name: role_name, marker: 'efgh'},
+          attached_policies_response(['p3']),
+        ],
       )}
       it "returns 1 policy mapping" do
         expect(described_class.retrieve_attached_policies(role)).to eql({
-          'p1' => 'arn:p1',
-          'p2' => 'arn:p2',
-          'p3' => 'arn:p3',
+          'p1' => 'arn:aws:iam::aws:policy/p1',
+          'p2' => 'arn:aws:iam::aws:policy/p2',
+          'p3' => 'arn:aws:iam::aws:policy/p3',
         })
       end
     end
   end
 
-  xdescribe '#ensure_attached_policies' do
+  describe '#ensure_attached_policies' do
     let(:role) { Aws::IAM::Types::Role.new(role_name: role_name) }
 
+    context "when 0 attached" do
+      before {stub_calls(
+        [:list_attached_role_policies, {role_name: role_name}, []]
+      )}
+      context "when adding none" do
+        it 'returns true' do
+          expect(described_class.ensure_attached_policies(role, [])).to be true
+        end
+      end
+      context "when adding 1" do
+        before {stub_calls(
+          [:attach_role_policy, {role_name: role_name, policy_arn: "arn:aws:iam::aws:policy/p1"}, nil]
+        )}
+        it 'returns true' do
+          expect(described_class.ensure_attached_policies(role, ['p1'])).to be true
+        end
+      end
+    end
+
+    context "when 1 attached" do
+      before {stub_calls(
+        [:list_attached_role_policies, {role_name: role_name}, attached_policies_response(['p1']), ]
+      )}
+      context "when exact" do
+        it 'returns true' do
+          expect(described_class.ensure_attached_policies(role, ['p1'])).to be true
+        end
+      end
+      context "when adding 1" do
+        before {stub_calls(
+          [:attach_role_policy, {role_name: role_name, policy_arn: "arn:aws:iam::aws:policy/p2"}, nil]
+        )}
+        it 'returns true' do
+          expect(described_class.ensure_attached_policies(role, ['p1', 'p2'])).to be true
+        end
+      end
+      context "when removing all" do
+        before {stub_calls(
+          [:detach_role_policy, {role_name: role_name, policy_arn: "arn:aws:iam::aws:policy/p1"}, nil]
+        )}
+        it 'returns true' do
+          expect(described_class.ensure_attached_policies(role, [])).to be true
+        end
+      end
+      context "when removing 1 and adding 1" do
+        before {stub_calls(
+          [:attach_role_policy, {role_name: role_name, policy_arn: "arn:aws:iam::aws:policy/p2"}, nil],
+          [:detach_role_policy, {role_name: role_name, policy_arn: "arn:aws:iam::aws:policy/p1"}, nil],
+        )}
+        it 'returns true' do
+          expect(described_class.ensure_attached_policies(role, ['p2'])).to be true
+        end
+      end
+    end
+
+    context "when 2 attached" do
+      before {stub_calls(
+        [:list_attached_role_policies, {role_name: role_name}, attached_policies_response(['p1', 'p2']), ]
+      )}
+      context "when exact" do
+        it 'returns true' do
+          expect(described_class.ensure_attached_policies(role, ['p1', 'p2'])).to be true
+        end
+      end
+      context "when adding 1" do
+        before {stub_calls(
+          [:attach_role_policy, {role_name: role_name, policy_arn: "arn:aws:iam::aws:policy/p3"}, nil]
+        )}
+        it 'returns true' do
+          expect(described_class.ensure_attached_policies(role, ['p1', 'p2', 'p3'])).to be true
+        end
+      end
+      context "when removing 1" do
+        before {stub_calls(
+          [:detach_role_policy, {role_name: role_name, policy_arn: "arn:aws:iam::aws:policy/p1"}, nil]
+        )}
+        it 'returns true' do
+          expect(described_class.ensure_attached_policies(role, ['p2'])).to be true
+        end
+      end
+      context "when removing 1 and adding 1" do
+        before {stub_calls(
+          [:attach_role_policy, {role_name: role_name, policy_arn: "arn:aws:iam::aws:policy/p3"}, nil],
+          [:detach_role_policy, {role_name: role_name, policy_arn: "arn:aws:iam::aws:policy/p1"}, nil],
+        )}
+        it 'returns true' do
+          expect(described_class.ensure_attached_policies(role, ['p2', 'p3'])).to be true
+        end
+      end
+      context "when removing all" do
+        before {stub_calls(
+          [:detach_role_policy, {role_name: role_name, policy_arn: "arn:aws:iam::aws:policy/p1"}, nil],
+          [:detach_role_policy, {role_name: role_name, policy_arn: "arn:aws:iam::aws:policy/p2"}, nil],
+        )}
+        it 'returns true' do
+          expect(described_class.ensure_attached_policies(role, [])).to be true
+        end
+      end
+    end
   end
 
   describe '#retrieve_instance_profile' do
@@ -181,5 +268,4 @@ describe GhostChef::IAM do
       end
     end
   end
-
 end
