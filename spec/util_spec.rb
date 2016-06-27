@@ -225,4 +225,16 @@ describe GhostChef::Util do
       end
     end
   end
+
+  context '#tags_from_hash' do
+    it 'handles an empty hash' do
+      expect(described_class.tags_from_hash({})).to eql([])
+    end
+
+    it 'handles one key' do
+      expect(described_class.tags_from_hash({a:1})).to eql([
+        {key: 'a', value: 1},
+      ])
+    end
+  end
 end

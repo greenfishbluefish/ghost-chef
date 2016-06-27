@@ -17,10 +17,6 @@ class GhostChef::Clients
     @@ec2 ||= Aws::EC2::Client.new
   end
 
-  def self.elb
-    @@elb ||= Aws::ElasticLoadBalancing::Client.new
-  end
-
   def self.rds
     @@rds ||= Aws::RDS::Client.new
   end
@@ -282,44 +278,6 @@ def ensure_instances_are_launched(instances)
   end
 end
 
-################################################################################
-# ELB
-
-# This needs to ensure the ELB with that name has the right stuff:
-# * listeners
-# * subnets
-# * security groups
-# * tags
-# * other stuff?
-def retrieve_elb(name)
-  GhostChef::Clients.elb.describe_load_balancers(
-    load_balancer_names: [name],
-  ).load_balancer_descriptions.first
-end
-def ensure_elb(name, listeners, subnets, sec_grp, tags)
-  retrieve_elb(name)
-rescue Aws::ElasticLoadBalancing::Errors::LoadBalancerNotFound
-  GhostChef::Clients.elb.create_load_balancer(
-    load_balancer_name: name,
-    listeners: listeners,
-    subnets: subnets,
-    security_groups: [sec_grp.group_id],
-    tags: tags_from_hash(tags),
-  )
-
-  retrieve_elb(name)
-end
-def ensure_instances_in_service(elb, instances)
-  GhostChef::Clients.elb.wait_until(
-    :any_instance_in_service,
-    load_balancer_name: elb.load_balancer_name,
-    instances: instances.map {|e| { instance_id: e.instance_id } },
-  )
-end
-
-################################################################################
-# EC2
-
 def retrieve_ami(id)
   GhostChef::Clients.ec2.describe_images(
     image_ids: [id],
@@ -434,10 +392,8 @@ def detach_asg_from_elb(asg, elb)
     load_balancer_names: [elb.load_balancer_name],
   )
   unless asg.instances.empty?
-    GhostChef::Clients.elb.wait_until(
-      :instance_deregistered,
-      load_balancer_name: elb.load_balancer_name,
-      instances: asg.instances.map {|e| { instance_id: e.instance_id } },
+    GhostChef::LoadBalancer.waitfor_all_instances_unavailable(
+      elb, asg.instances,
     )
   end
 end
@@ -482,7 +438,7 @@ def destroy_auto_scaling_group(asg)
 end
 
 ################################################################################
-# CloudWatch, EC2, RDS
+# CloudWatch, EC2, RDS, ELB
 
 class CloudWatch
   def self.metrics
@@ -591,11 +547,8 @@ def ensure_alarm(params)
     opts[:namespace] = 'AWS/ELB'
 
     # Verify the elb actually exists and find its name
-    begin
-      retrieve_elb(opts[:name])
-    rescue Aws::ElasticLoadBalancing::Errors::LoadBalancerNotFound
-      abort "Cannot find ELB #{opts[:name]}"
-    end
+    elb = GhostChef::LoadBalancer.retrieve_elb(opts[:name])
+    abort "Cannot find ELB #{opts[:name]}" unless elb
   when :rds
     dimension = {
       name: 'DBInstanceIdentifier',
