@@ -44,6 +44,12 @@ class GhostChef::Util
     return items
   end
 
+  def self.tags_from_hash(tags)
+    tags.to_a.map {|v|
+      { key: v[0].to_s, value: v[1] }
+    }
+  end
+
   private
 
   def self.descend(obj, keys)

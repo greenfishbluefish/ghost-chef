@@ -38,8 +38,6 @@ Aws.config.update({
 
 require_relative 'ghost-chef/util'
 
-require_relative 'services/junk_drawer'
-
 require_relative 'services/certificates'
 require_relative 'services/cloudfront'
 require_relative 'services/dns'
@@ -48,3 +46,5 @@ require_relative 'services/iam'
 require_relative 'services/load_balancer'
 require_relative 'services/notification'
 require_relative 'services/s3'
+
+require_relative 'services/junk_drawer'
