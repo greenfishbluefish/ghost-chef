@@ -11,10 +11,12 @@ class GhostChef::ElasticSearch
   #
   # In general, use ensure() instead of this method.
   def self.retrieve(domain_name)
-    es_domain = @@client.describe_elasticsearch_domain(domain_name: domain_name)
+    es_domain = @@client.describe_elasticsearch_domain(
+      domain_name: domain_name
+    ).domain_status
 
     #TODO: what to do in this case? 
-    raise GhostChef::Error, "This domain is currently being deleted" if es_domain.domain_status.deleted
+    raise GhostChef::Error, "This domain is currently being deleted" if es_domain.deleted
 
     es_domain
   rescue Aws::ElasticsearchService::Errors::ResourceNotFoundException
@@ -50,7 +52,7 @@ class GhostChef::ElasticSearch
 
     # wait until processing is completed
     # Endpoint won't be available until then
-    while domain.domain_status.processing || !domain.domain_status.endpoint
+    while domain.processing || !domain.endpoint
       puts "Elasticsearch domain is still processing..."
       sleep 30
 
@@ -58,6 +60,6 @@ class GhostChef::ElasticSearch
       domain = retrieve(domain_name)
     end
 
-    domain.domain_status.endpoint
+    domain.endpoint
   end
 end

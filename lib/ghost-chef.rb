@@ -28,10 +28,7 @@
 # GhostChef::Notifications.ensure_topic()) to retrieve the topic object.
 #
 # See the documentation for each method for further explanation and examples.
-module GhostChef
-	VERSION = '0.0.1'
-  class Error < RuntimeError; end
-end
+require_relative 'ghost-chef/version'
 
 require 'aws-sdk'
 
@@ -39,12 +36,14 @@ Aws.config.update({
   region: 'us-east-1',
 })
 
-require_relative 'util'
+require_relative 'ghost-chef/util'
 
 require_relative 'services/junk_drawer'
-require_relative 'services/elastic_search'
-require_relative 'services/s3'
-require_relative 'services/dns'
-require_relative 'services/cloudfront'
+
 require_relative 'services/certificates'
+require_relative 'services/cloudfront'
+require_relative 'services/dns'
+require_relative 'services/elastic_search'
+require_relative 'services/iam'
 require_relative 'services/notification'
+require_relative 'services/s3'

@@ -1,8 +1,8 @@
 require 'simplecov'
 SimpleCov.start do
   add_filter '/spec/'
-  minimum_coverage 47
-  minimum_coverage_by_file 17
+  minimum_coverage 57
+  minimum_coverage_by_file 18
   refuse_coverage_drop
 end
 
@@ -16,8 +16,10 @@ Aws.config.update({
 # Code under test, located in /lib/
 require 'ghost-chef'
 
-# Helpers, located in /spec/
-require 'aws_stubbing'
+# Helpers, located in /spec/helpers
+require 'helpers/aws_stubbing'
+require 'helpers/service_context'
+require 'helpers/descend_match'
 
 RSpec.configure do |config|
   config.include AwsStubs

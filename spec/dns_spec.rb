@@ -1,5 +1,5 @@
 describe GhostChef::Route53 do
-  let(:client) { GhostChef::Route53.class_variable_get('@@client') }
+  include_context :service
 
   let(:hz_call) { :list_hosted_zones_by_name }
   def hz_request(name)
@@ -79,7 +79,7 @@ describe GhostChef::Route53 do
         [hz_call, hz_request('foo.com'), hz_response([])],
       )}
       it "returns nil" do
-        expect(GhostChef::Route53.zone_for_name('foo.com')).to be nil
+        expect(described_class.zone_for_name('foo.com')).to be nil
       end
     end
 
@@ -89,11 +89,15 @@ describe GhostChef::Route53 do
       )}
 
       it "returns the TLD for the TLD" do
-        expect(GhostChef::Route53.zone_for_name('foo.com').name).to eql 'foo.com'
+        expect(
+          described_class.zone_for_name('foo.com')
+        ).to descend_match name: 'foo.com'
       end
 
       it "returns the TLD for a subdomain" do
-        expect(GhostChef::Route53.zone_for_name('www.foo.com').name).to eql 'foo.com'
+        expect(
+          described_class.zone_for_name('www.foo.com')
+        ).to descend_match name: 'foo.com'
       end
     end
   end
@@ -104,7 +108,7 @@ describe GhostChef::Route53 do
         [hz_call, hz_request('foo.com'), hz_response([])],
       )}
       it "returns false" do
-        expect(GhostChef::Route53.ensure_dns_for_s3('foo.com')).to be_falsy
+        expect(described_class.ensure_dns_for_s3('foo.com')).to be_falsy
       end
     end
 
@@ -118,7 +122,7 @@ describe GhostChef::Route53 do
         stub_calls(
           [lrr_call, lrr_request(name), lrr_response([name])],
         )
-        expect(GhostChef::Route53.ensure_dns_for_s3(name)).to be true
+        expect(described_class.ensure_dns_for_s3(name)).to be true
       end
 
       it 'returns a record already there for a subdomain' do
@@ -127,7 +131,7 @@ describe GhostChef::Route53 do
           [lrr_call, lrr_request(name), lrr_response([name])],
         )
 
-        expect(GhostChef::Route53.ensure_dns_for_s3(name)).to be true
+        expect(described_class.ensure_dns_for_s3(name)).to be true
       end
 
       it 'creates a record if needed' do
@@ -146,21 +150,21 @@ describe GhostChef::Route53 do
           ],
         )
 
-        expect(GhostChef::Route53.ensure_dns_for_s3(name)).to be true
+        expect(described_class.ensure_dns_for_s3(name)).to be true
       end
     end
   end
 
   context '#ensure_dns_for_cloudfront' do
     let(:cf_domain) { 'cloudfront.aws.com' }
-    let(:cloudfront) { OpenStruct.new({domain_name: cf_domain}) }
+    let(:cloudfront) { Aws::CloudFront::Types::Distribution.new(domain_name: cf_domain) }
 
     context 'with no zones found' do
       before {stub_calls(
         [hz_call, hz_request('foo.com'), hz_response([])],
       )}
       it "returns false" do
-        expect(GhostChef::Route53.ensure_dns_for_cloudfront('foo.com', cloudfront)).to be false
+        expect(described_class.ensure_dns_for_cloudfront('foo.com', cloudfront)).to be false
       end
     end
 
@@ -175,7 +179,7 @@ describe GhostChef::Route53 do
           [lrr_call, lrr_request(name), lrr_response([name])],
         )
 
-        expect(GhostChef::Route53.ensure_dns_for_cloudfront(name, cloudfront)).to be true
+        expect(described_class.ensure_dns_for_cloudfront(name, cloudfront)).to be true
       end
 
       it 'returns a record already there for a subdomain' do
@@ -184,7 +188,7 @@ describe GhostChef::Route53 do
           [lrr_call, lrr_request(name), lrr_response([name])],
         )
 
-        expect(GhostChef::Route53.ensure_dns_for_cloudfront(name, cloudfront)).to be true
+        expect(described_class.ensure_dns_for_cloudfront(name, cloudfront)).to be true
       end
 
       it 'creates a record if needed' do
@@ -203,7 +207,7 @@ describe GhostChef::Route53 do
           ],
         )
 
-        expect(GhostChef::Route53.ensure_dns_for_cloudfront(name, cloudfront)).to be true
+        expect(described_class.ensure_dns_for_cloudfront(name, cloudfront)).to be true
       end
     end
   end

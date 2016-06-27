@@ -1,24 +1,24 @@
 describe GhostChef::S3 do
-  let(:client) { GhostChef::S3.class_variable_get('@@client') }
+  include_context :service
 
   describe '#bucket_exists' do
     context 'finds the bucket' do
       before { stub_calls([:head_bucket, {bucket: 'bucket'}, {}]) }
-      it { expect(GhostChef::S3.bucket_exists('bucket')).to be true }
+      it { expect(described_class.bucket_exists('bucket')).to be true }
     end
     context 'finds no bucket' do
       before { stub_calls([:head_bucket, {bucket: 'bucket'}, 'NotFound']) }
-      it { expect(GhostChef::S3.bucket_exists('bucket')).to be false }
+      it { expect(described_class.bucket_exists('bucket')).to be false }
     end
     context 'cannot see the bucket' do
       before { stub_calls([:head_bucket, {bucket: 'bucket'}, 'Forbidden']) }
-      it { expect(GhostChef::S3.bucket_exists('bucket')).to be false }
+      it { expect(described_class.bucket_exists('bucket')).to be false }
     end
     context 'times out' do
       before { stub_calls([:head_bucket, {bucket: 'bucket'}, 'TimedOut']) }
       it {
         expect {
-          GhostChef::S3.bucket_exists('bucket')
+          described_class.bucket_exists('bucket')
         }.to raise_error Aws::S3::Errors::TimedOut
       }
     end
@@ -27,21 +27,21 @@ describe GhostChef::S3 do
   describe '#ensure_bucket' do
     context 'bucket exists' do
       before { stub_calls([:head_bucket, {bucket: 'bucket'}, {}]) }
-      it { expect(GhostChef::S3.ensure_bucket('bucket')).to be true }
+      it { expect(described_class.ensure_bucket('bucket')).to be true }
     end
     context 'bucket does not exist' do
       before { stub_calls(
         [:head_bucket, {bucket: 'bucket'}, 'NotFound'],
         [:create_bucket, {bucket: 'bucket', acl: 'private'}, {location: 'some-place'}],
       ) }
-      it { expect(GhostChef::S3.ensure_bucket('bucket')).to be true }
+      it { expect(described_class.ensure_bucket('bucket')).to be true }
     end
     context 'cannot create a bucket' do
       before { stub_calls(
         [:head_bucket, {bucket: 'bucket'}, 'NotFound'],
         [:create_bucket, {bucket: 'bucket', acl: 'private'}, 'Forbidden'],
       ) }
-      it { expect{GhostChef::S3.ensure_bucket('bucket')}.to raise_error Aws::S3::Errors::Forbidden}
+      it { expect{described_class.ensure_bucket('bucket')}.to raise_error Aws::S3::Errors::Forbidden}
     end
   end
 
@@ -57,7 +57,7 @@ describe GhostChef::S3 do
       )
 
       expect(
-        GhostChef::S3.upload('bucket', 'foo')
+        described_class.upload('bucket', 'foo')
       ).to be true
     end
 
@@ -72,7 +72,7 @@ describe GhostChef::S3 do
       )
 
       expect(
-        GhostChef::S3.upload('bucket', 'foo', contents: 'abcd')
+        described_class.upload('bucket', 'foo', contents: 'abcd')
       ).to be true
     end
 
@@ -87,7 +87,7 @@ describe GhostChef::S3 do
       )
 
       expect(
-        GhostChef::S3.upload('bucket', 'foo', contents: 'abcd', acl: 'public-read')
+        described_class.upload('bucket', 'foo', contents: 'abcd', acl: 'public-read')
       ).to be true
     end
   end
@@ -102,7 +102,7 @@ describe GhostChef::S3 do
           },
         }, {}],
       )
-      expect(GhostChef::S3.enable_website('bucket')).to be true
+      expect(described_class.enable_website('bucket')).to be true
     end
 
     it 'setting index document' do
@@ -114,7 +114,7 @@ describe GhostChef::S3 do
           },
         }, {}],
       )
-      expect(GhostChef::S3.enable_website('bucket', index: 'index.htm')).to be true
+      expect(described_class.enable_website('bucket', index: 'index.htm')).to be true
     end
 
     it 'setting error document' do
@@ -127,7 +127,7 @@ describe GhostChef::S3 do
           },
         }, {}],
       )
-      expect(GhostChef::S3.enable_website('bucket', error: 'error.html')).to be true
+      expect(described_class.enable_website('bucket', error: 'error.html')).to be true
     end
   end
 end
