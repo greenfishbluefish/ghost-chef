@@ -291,11 +291,6 @@ end
 # * security groups
 # * tags
 # * other stuff?
-def retrieve_elb(name)
-  GhostChef::Clients.elb.describe_load_balancers(
-    load_balancer_names: [name],
-  ).load_balancer_descriptions.first
-end
 def ensure_elb(name, listeners, subnets, sec_grp, tags)
   retrieve_elb(name)
 rescue Aws::ElasticLoadBalancing::Errors::LoadBalancerNotFound
@@ -349,7 +344,7 @@ def destroy_ami(ami)
 end
 
 ################################################################################
-# ASG
+# ASG, ELB
 
 def retrieve_launch_configuration(name)
   GhostChef::Clients.asg.describe_launch_configurations(
