@@ -270,16 +270,122 @@ describe GhostChef::IAM do
   end
 
   describe '#ensure_instance_profile' do
+    context "when the profile doesn't exist" do
+      before {
+        stub_calls(
+          [:get_instance_profile, {instance_profile_name: instance_profile_name}, 'NoSuchEntity'],
+          [:create_instance_profile, {instance_profile_name: instance_profile_name}, instance_profile_response(instance_profile_name)],
+        )
+      }
+      it 'returns a profile' do
+        expect(described_class.ensure_instance_profile(instance_profile_name)).to descend_match(
+          instance_profile_name: instance_profile_name,
+        )
+      end
+    end
+
+    context 'when the profile exists' do
+      before {
+        stub_calls(
+          [:get_instance_profile, {instance_profile_name: instance_profile_name}, instance_profile_response(instance_profile_name)],
+        )
+      }
+      it 'returns the profile' do
+        expect(described_class.ensure_instance_profile(instance_profile_name)).to descend_match(
+          instance_profile_name: instance_profile_name,
+        )
+      end
+    end
   end
 
   describe '#retrieve_attached_roles' do
-    let(:profile) { Aws::IAM::Types::InstanceProfile.new(instance_profile_name: 'abcd') }
+    let(:roles) { nil } # Scope it higher for :profile to see
+    let(:profile) { Aws::IAM::Types::InstanceProfile.new(instance_profile_name: 'abcd', roles: roles) }
 
-    it 'has a name' do
-      expect(profile).to descend_match(instance_profile_name: 'abcd')
+    context 'when zero roles' do
+      let(:roles) { [] }
+      it 'is an empty hash' do
+        expect(described_class.retrieve_attached_roles(profile)).to eql({})
+      end
+    end
+
+    context 'when one role' do
+      let(:roles) { %w(foo).map{|e| Aws::IAM::Types::Role.new(role_name: e)} }
+      it 'is a hash with 1 value' do
+        expect(described_class.retrieve_attached_roles(profile)).to eql({'foo' => true})
+      end
+    end
+
+    context 'when many roles' do
+      let(:roles) { %w(foo bar baz).map{|e| Aws::IAM::Types::Role.new(role_name: e)} }
+      it 'is a hash with 3 values' do
+        expect(described_class.retrieve_attached_roles(profile)).to eql({
+          'foo' => true,
+          'bar' => true,
+          'baz' => true,
+        })
+      end
     end
   end
 
   describe '#ensure_attached_roles' do
+    let(:roles) { nil } # Scope it higher for :profile to see
+    let(:profile) { Aws::IAM::Types::InstanceProfile.new(instance_profile_name: 'abcd', roles: roles) }
+
+    context 'when 0 attached' do
+      let(:roles) { [] }
+      context 'when adding none' do
+        it 'returns true' do
+          expect(described_class.ensure_attached_roles(profile)).to be true
+        end
+      end
+
+      context 'when adding one' do
+        before {stub_calls(
+          [:add_role_to_instance_profile, {instance_profile_name: 'abcd', role_name: 'foo'}, nil],
+        )}
+        it 'returns true' do
+          expect(described_class.ensure_attached_roles(profile, ['foo'])).to be true
+        end
+      end
+    end
+
+    context 'when 1 attached' do
+      let(:roles) { %w(foo).map{|e| Aws::IAM::Types::Role.new(role_name: e)} }
+
+      context "when removing all" do
+        before {stub_calls(
+          [:remove_role_from_instance_profile, {instance_profile_name: 'abcd', role_name: 'foo'}, nil],
+        )}
+        it 'returns true' do
+          expect(described_class.ensure_attached_roles(profile, [])).to be true
+        end
+      end
+
+      context "when exactly correct" do
+        it 'returns true' do
+          expect(described_class.ensure_attached_roles(profile, ['foo'])).to be true
+        end
+      end
+
+      context "when adding one" do
+        before {stub_calls(
+          [:add_role_to_instance_profile, {instance_profile_name: 'abcd', role_name: 'bar'}, nil],
+        )}
+        it 'returns true' do
+          expect(described_class.ensure_attached_roles(profile, ['foo', 'bar'])).to be true
+        end
+      end
+
+      context "when adding and removing one" do
+        before {stub_calls(
+          [:add_role_to_instance_profile, {instance_profile_name: 'abcd', role_name: 'bar'}, nil],
+          [:remove_role_from_instance_profile, {instance_profile_name: 'abcd', role_name: 'foo'}, nil],
+        )}
+        it 'returns true' do
+          expect(described_class.ensure_attached_roles(profile, ['bar'])).to be true
+        end
+      end
+    end
   end
 end
