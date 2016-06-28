@@ -386,18 +386,6 @@ def ensure_auto_scaling_group(name, options)
   return auto_scaling_group
 end
 
-def detach_asg_from_elb(asg, elb)
-  GhostChef::Clients.asg.detach_load_balancers(
-    auto_scaling_group_name: asg.auto_scaling_group_name,
-    load_balancer_names: [elb.load_balancer_name],
-  )
-  unless asg.instances.empty?
-    GhostChef::LoadBalancer.waitfor_all_instances_unavailable(
-      elb, asg.instances,
-    )
-  end
-end
-
 ################################################################################
 # ASG, EC2
 
