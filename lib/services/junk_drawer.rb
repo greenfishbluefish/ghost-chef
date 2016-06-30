@@ -309,27 +309,6 @@ end
 ################################################################################
 # ASG
 
-def retrieve_launch_configuration(name)
-  GhostChef::Clients.asg.describe_launch_configurations(
-    launch_configuration_names: [name]
-  ).launch_configurations[0]
-end
-def ensure_launch_configuration(name, options)
-  configuration = retrieve_launch_configuration(name)
-  unless configuration
-    GhostChef::Clients.asg.create_launch_configuration(
-      launch_configuration_name: name,
-      image_id: options[:image_id],
-      security_groups: options[:security_groups],
-      instance_type: options[:instance_type],
-      key_name: options[:key_name],
-    )
-    configuration = retrieve_launch_configuration(name)
-  end
-
-  return configuration
-end
-
 def retrieve_auto_scaling_groups(options)
   # Name is unique, so return just the one item
   if options.has_key? :name

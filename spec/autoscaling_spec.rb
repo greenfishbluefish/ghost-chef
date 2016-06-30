@@ -1,10 +1,61 @@
 describe GhostChef::AutoScaling do
   include_context :service
 
+  def launch_configuration_response(name)
+    {
+      launch_configuration_name: name,
+      image_id: 'abcd',
+      instance_type: 't1.tiny',
+      created_time: Time.now,
+    }
+  end
+
   context '#retrieve_launch_configuration' do
+    context "when it doesn't exist" do
+      before{stub_calls(
+        [:describe_launch_configurations, {launch_configuration_names:['abcd']}, {launch_configurations:[]}],
+      )}
+      it "returns nil" do
+        expect(described_class.retrieve_launch_configuration('abcd')).to be nil
+      end
+    end
+
+    context "when it exists" do
+      before{stub_calls(
+        [:describe_launch_configurations, {launch_configuration_names:['abcd']}, {launch_configurations:[launch_configuration_response('abcd')]}],
+      )}
+      it "returns the launch configuration" do
+        expect(described_class.retrieve_launch_configuration('abcd')).to descend_match(
+          launch_configuration_name: 'abcd',
+        )
+      end
+    end
   end
 
   context '#ensure_launch_configuration' do
+    context "when it doesn't already exist" do
+      before{stub_calls(
+        [:describe_launch_configurations, {launch_configuration_names:['abcd']}, {launch_configurations:[]}],
+        [:create_launch_configuration, {launch_configuration_name:'abcd'}, nil],
+        [:describe_launch_configurations, {launch_configuration_names:['abcd']}, {launch_configurations:[launch_configuration_response('abcd')]}],
+      )}
+      it "returns a new launch configuration" do
+        expect(described_class.ensure_launch_configuration('abcd')).to descend_match(
+          launch_configuration_name: 'abcd',
+        )
+      end
+    end
+
+    context "when it already exists" do
+      before{stub_calls(
+        [:describe_launch_configurations, {launch_configuration_names:['abcd']}, {launch_configurations:[launch_configuration_response('abcd')]}],
+      )}
+      it "returns the existing launch configuration" do
+        expect(described_class.ensure_launch_configuration('abcd')).to descend_match(
+          launch_configuration_name: 'abcd',
+        )
+      end
+    end
   end
 
   # Yes, groupS, not group.
