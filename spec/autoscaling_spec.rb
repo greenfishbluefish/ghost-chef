@@ -10,6 +10,19 @@ describe GhostChef::AutoScaling do
     }
   end
 
+  def auto_scaling_group_response(name)
+    {
+      auto_scaling_group_name: name,
+      min_size: 1,
+      max_size: 1,
+      desired_capacity: 1,
+      default_cooldown: 1,
+      availability_zones: [],
+      health_check_type: 'none',
+      created_time: Time.now,
+    }
+  end
+
   context '#retrieve_launch_configuration' do
     context "when it doesn't exist" do
       before{stub_calls(
@@ -60,9 +73,75 @@ describe GhostChef::AutoScaling do
 
   # Yes, groupS, not group.
   context '#retrieve_auto_scaling_groups' do
+    context "when looking by name" do
+      context "when it doesn't exist" do
+        before{stub_calls(
+          [:describe_auto_scaling_groups, {auto_scaling_group_names:['abcd']}, {auto_scaling_groups:[]}],
+        )}
+        it "returns nil" do
+          expect(described_class.retrieve_auto_scaling_groups(name: 'abcd')).to be nil
+        end
+      end
+
+      context "when it exists" do
+        before{stub_calls(
+          [:describe_auto_scaling_groups, {auto_scaling_group_names:['abcd']}, {auto_scaling_groups:[auto_scaling_group_response('abcd')]}],
+        )}
+        it "returns the auto scaling group" do
+          expect(described_class.retrieve_auto_scaling_groups(name: 'abcd')).to descend_match(
+            auto_scaling_group_name: 'abcd',
+          )
+        end
+      end
+    end
+
+    context "when looking by min_size" do
+      context "when it doesn't exist" do
+        before{stub_calls(
+          [:describe_auto_scaling_groups, {max_records: 100}, {auto_scaling_groups:[]}],
+        )}
+        it "returns []" do
+          expect(described_class.retrieve_auto_scaling_groups(min_size: 1)).to eql []
+        end
+      end
+
+      context "when it exists" do
+        before{stub_calls(
+          [:describe_auto_scaling_groups, {max_records: 100}, {auto_scaling_groups:[auto_scaling_group_response('abcd')]}],
+        )}
+        it "returns the auto scaling group" do
+          expect(described_class.retrieve_auto_scaling_groups(min_size: 1)[0]).to descend_match(
+            auto_scaling_group_name: 'abcd',
+          )
+        end
+      end
+    end
   end
 
   context '#ensure_auto_scaling_group' do
+    context "when it doesn't exist" do
+      before{stub_calls(
+        [:describe_auto_scaling_groups, {auto_scaling_group_names:['abcd']}, {auto_scaling_groups:[]}],
+        [:create_auto_scaling_group, {auto_scaling_group_name:'abcd', min_size: 1, max_size: 1}, nil],
+        [:describe_auto_scaling_groups, {auto_scaling_group_names:['abcd']}, {auto_scaling_groups:[auto_scaling_group_response('abcd')]}],
+      )}
+      it "returns the new auto scaling group" do
+        expect(described_class.ensure_auto_scaling_group('abcd', min_size: 1, max_size: 1)).to descend_match(
+          auto_scaling_group_name: 'abcd',
+        )
+      end
+    end
+
+    context "when it exists" do
+      before{stub_calls(
+        [:describe_auto_scaling_groups, {auto_scaling_group_names:['abcd']}, {auto_scaling_groups:[auto_scaling_group_response('abcd')]}],
+      )}
+      it "returns the auto scaling group" do
+        expect(described_class.ensure_auto_scaling_group('abcd')).to descend_match(
+          auto_scaling_group_name: 'abcd',
+        )
+      end
+    end
   end
 
   context '#destroy_auto_scaling_group' do

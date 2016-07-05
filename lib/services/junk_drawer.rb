@@ -307,65 +307,6 @@ def destroy_ami(ami)
 end
 
 ################################################################################
-# ASG
-
-def retrieve_auto_scaling_groups(options)
-  # Name is unique, so return just the one item
-  if options.has_key? :name
-    return GhostChef::Clients.asg.describe_auto_scaling_groups(
-      auto_scaling_group_names: [options[:name]]
-    ).auto_scaling_groups[0]
-  else
-    # XXX: Convert this to use filter() above.
-    # describe_auto_scaling_groups() does not provide a filtering mechanism, so
-    # provide our own.
-    resp = GhostChef::Clients.asg.describe_auto_scaling_groups(max_records: 100)
-    groups = resp.auto_scaling_groups
-    while resp.next_token
-      resp = GhostChef::Clients.asg.describe_auto_scaling_groups(
-        max_records: 100,
-        next_token: resp.next_token,
-      )
-      groups.concat resp.auto_scaling_groups
-    end
-
-    options.each do |type, value|
-      groups.select! {|e|
-        v = e.send(type)
-        if v.is_a? Array
-          v.include? value
-        else
-          v == value
-        end
-      }
-    end
-
-    return groups
-  end
-end
-def ensure_auto_scaling_group(name, options)
-  auto_scaling_group = retrieve_auto_scaling_groups(name: name)
-
-  unless auto_scaling_group
-    GhostChef::Clients.asg.create_auto_scaling_group(
-      auto_scaling_group_name: name,
-      launch_configuration_name: options[:launch_configuration_name],
-      min_size: options[:min_size],
-      max_size: options[:max_size],
-      desired_capacity: options[:desired_capacity],
-      availability_zones: options[:availability_zones],
-      load_balancer_names: options[:load_balancer_names],
-      vpc_zone_identifier: options[:vpc_zone_identifier],
-      tags: tags_from_hash(tags),
-    )
-
-    auto_scaling_group = retrieve_auto_scaling_groups(name: name)
-  end
-
-  return auto_scaling_group
-end
-
-################################################################################
 # ASG, EC2
 
 def destroy_auto_scaling_group(asg)
