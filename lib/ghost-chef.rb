@@ -38,8 +38,10 @@ Aws.config.update({
 
 require_relative 'ghost-chef/util'
 
+require_relative 'services/autoscaling'
 require_relative 'services/certificates'
 require_relative 'services/cloudfront'
+require_relative 'services/compute'
 require_relative 'services/dns'
 require_relative 'services/elastic_search'
 require_relative 'services/iam'

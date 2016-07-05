@@ -287,41 +287,41 @@ describe GhostChef::Cloudfront do
     end
   end
 
-  # I don't understand how to stub out a waiter.
-  xcontext '#waitfor_distribution_deployed' do
-    it "returns true when successful" do
-      distro = Aws::CloudFront::Types::Distribution.new(id: 'abcd')
-      allow_any_instance_of(Kernel).to receive(:sleep)
-      stub_calls(
-        [:wait_until, [:distribution_deployed, id: distro.id], true],
-        #[:get_distribution, {}, nil],
-        [:get_distribution, {id: distro.id}, {distribution:{
-          id:'abcd',
-          status: 'Deployed',
-          last_modified_time: Time.now,
-          in_progress_invalidation_batches: 0,
-          domain_name: 'foo.com',
-          active_trusted_signers: {enabled: true, quantity: 0},
-          distribution_config: {
-            caller_reference: 'abcd',
-            origins: {quantity: 0},
-            default_cache_behavior: {
-              target_origin_id: 'some id',
-              forwarded_values: {
-                query_string: true, cookies: { forward: 'all' },
-              },
-              trusted_signers: { enabled: false, quantity: 0 },
-              viewer_protocol_policy: 'allow-all',
-              min_ttl: 10,
-            },
-            comment: 'some comment',
-            enabled: true,
-          },
-        }}],
-      )
-      expect {
-        expect(described_class.waitfor_distribution_deployed(distro)).to be true
-      }.to output(/Waiting for distribution to be deployed/).to_stdout
-    end
-  end
+  # TODO: I don't understand how to stub out a waiter.
+  #context '#waitfor_distribution_deployed' do
+  #  it "returns true when successful" do
+  #    distro = Aws::CloudFront::Types::Distribution.new(id: 'abcd')
+  #    allow_any_instance_of(Kernel).to receive(:sleep)
+  #    stub_calls(
+  #      [:wait_until, [:distribution_deployed, id: distro.id], true],
+  #      #[:get_distribution, {}, nil],
+  #      [:get_distribution, {id: distro.id}, {distribution:{
+  #        id:'abcd',
+  #        status: 'Deployed',
+  #        last_modified_time: Time.now,
+  #        in_progress_invalidation_batches: 0,
+  #        domain_name: 'foo.com',
+  #        active_trusted_signers: {enabled: true, quantity: 0},
+  #        distribution_config: {
+  #          caller_reference: 'abcd',
+  #          origins: {quantity: 0},
+  #          default_cache_behavior: {
+  #            target_origin_id: 'some id',
+  #            forwarded_values: {
+  #              query_string: true, cookies: { forward: 'all' },
+  #            },
+  #            trusted_signers: { enabled: false, quantity: 0 },
+  #            viewer_protocol_policy: 'allow-all',
+  #            min_ttl: 10,
+  #          },
+  #          comment: 'some comment',
+  #          enabled: true,
+  #        },
+  #      }}],
+  #    )
+  #    expect {
+  #      expect(described_class.waitfor_distribution_deployed(distro)).to be true
+  #    }.to output(/Waiting for distribution to be deployed/).to_stdout
+  #  end
+  #end
 end
