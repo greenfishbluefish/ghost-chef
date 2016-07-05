@@ -5,10 +5,6 @@
 Everyone = '0.0.0.0/0'
 
 class GhostChef::Clients
-  def self.asg
-    @@asg ||= Aws::AutoScaling::Client.new
-  end
-
   def self.cloudwatch
     @@cloudwatch ||= Aws::CloudWatch::Client.new
   end
@@ -304,45 +300,6 @@ def destroy_ami(ami)
       )
     end
   end
-end
-
-################################################################################
-# ASG, EC2
-
-def destroy_auto_scaling_group(asg)
-  # Ensure that all instances are terminated and that the ASG no longer spawns instances
-  puts "  Terminating all instances in ASG"
-  GhostChef::Clients.asg.update_auto_scaling_group(
-    auto_scaling_group_name: asg.auto_scaling_group_name,
-    min_size: 0,
-    max_size: 0,
-    desired_capacity: 0,
-  )
-
-  unless asg.instances.empty?
-    GhostChef::Clients.ec2.wait_until(
-      :instance_terminated,
-      instance_ids: asg.instances.map {|e| e.instance_id },
-    )
-  end
-
-  launch_config_name = asg.launch_configuration_name
-  puts "  Deleting ASG"
-  GhostChef::Clients.asg.delete_auto_scaling_group(
-    auto_scaling_group_name: asg.auto_scaling_group_name,
-    force_delete: true,
-  )
-
-  image_id = retrieve_launch_configuration(launch_config_name).image_id
-
-  # We have to delete the launch configuration after the ASG
-  puts "  Deleting launch-configuration"
-  GhostChef::Clients.asg.delete_launch_configuration(
-    launch_configuration_name: launch_config_name,
-  )
-
-  # We have to delete the AMI after the launch configuration
-  destroy_ami(retrieve_ami(image_id))
 end
 
 ################################################################################

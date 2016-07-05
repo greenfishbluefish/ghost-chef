@@ -32,6 +32,9 @@ class GhostChef::AutoScaling
     return configuration
   end
 
+  def self.destroy_launch_configuration(name)
+  end
+
   def self.retrieve_auto_scaling_groups(options)
     # Name is unique, so return just the one item
     if options.has_key? :name
@@ -102,6 +105,7 @@ class GhostChef::AutoScaling
         max_size: options[:max_size] || 1, # Int
       }
 
+      # TODO: Validate either a launch-config or instance_id is provided.
       [
         :availability_zones, # Array of Zones
         :desired_capacity, # Int
@@ -120,6 +124,42 @@ class GhostChef::AutoScaling
     end
 
     return auto_scaling_group
+  end
+
+  def self.destroy_auto_scaling_group(asg)
+    # Normalize what we receive.
+    asg = retrieve_auto_scaling_groups(name: asg) if asg.is_a? String
+
+    # Ensure that all instances are terminated and no longer spawns instances.
+    # We cannot destroy the ASG until this is true.
+    @@client.update_auto_scaling_group(
+      auto_scaling_group_name: asg.auto_scaling_group_name,
+      min_size: 0,
+      max_size: 0,
+      desired_capacity: 0,
+    )
+
+    unless asg.instances.empty?
+      GhostChef::Compute.waitfor_all_instances_terminated(asg.instances)
+    end
+
+    @@client.delete_auto_scaling_group(
+      auto_scaling_group_name: asg.auto_scaling_group_name,
+      force_delete: true,
+    )
+
+    return true
+
+    #launch_config_name = asg.launch_configuration_name
+    #image_id = retrieve_launch_configuration(launch_config_name).image_id
+
+    # We have to delete the launch configuration after the ASG
+    #@@client.delete_launch_configuration(
+    #  launch_configuration_name: launch_config_name,
+    #)
+
+    # We have to delete the AMI after the launch configuration
+    #destroy_ami(retrieve_ami(image_id))
   end
 
   def self.detach_asg_from_elb(asg, elb)

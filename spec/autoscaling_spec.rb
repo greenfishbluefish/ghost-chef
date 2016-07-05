@@ -145,6 +145,39 @@ describe GhostChef::AutoScaling do
   end
 
   context '#destroy_auto_scaling_group' do
+    let(:instances) { nil }
+    let(:asg) { Aws::AutoScaling::Types::AutoScalingGroup.new(auto_scaling_group_name: 'asg:abcd', instances: instances) }
+
+    context "without instances" do
+      let(:instances) {[]}
+
+      before {stub_calls(
+        [:describe_auto_scaling_groups, {auto_scaling_group_names:['asg:abcd']}, {auto_scaling_groups:[auto_scaling_group_response('asg:abcd')]}],
+        [:delete_auto_scaling_group, {
+          auto_scaling_group_name: 'asg:abcd', force_delete: true,
+        }, nil],
+      )}
+
+      it "destroys the ASG, by name" do
+        expect(GhostChef::Compute).not_to receive(:waitfor_all_instances_terminated)
+        expect(described_class.destroy_auto_scaling_group(asg.auto_scaling_group_name)).to be true
+      end
+    end
+
+    context "with instances" do
+      let(:instances) { [1] }
+
+      before {stub_calls(
+        [:delete_auto_scaling_group, {
+          auto_scaling_group_name: 'asg:abcd', force_delete: true,
+        }, nil],
+      )}
+
+      it "destroys the ASG, by object" do
+        expect(GhostChef::Compute).to receive(:waitfor_all_instances_terminated)
+        expect(described_class.destroy_auto_scaling_group(asg)).to be true
+      end
+    end
   end
 
   context '#detach_asg_from_elb' do
