@@ -20,10 +20,10 @@ class GhostChef::Route53
   #++
   @@hosted_zone_ids = {
     S3: {
-      'us-east-1': 'Z3AQBSTGFYJSTF',
+      'us-east-1' => 'Z3AQBSTGFYJSTF',
     },
     CloudFront: {
-      'us-east-1': 'Z2FDTNDATAQYW2',
+      'us-east-1' => 'Z2FDTNDATAQYW2',
     },
   }
 
@@ -34,7 +34,7 @@ class GhostChef::Route53
   # name the S3 bucket 'www.foo.com'.
   def self.ensure_dns_for_s3(name)
     self.ensure_dns_for(name, 'S3',
-			hosted_zone_id: @@hosted_zone_ids[:S3][:'us-east-1'],
+			hosted_zone_id: @@hosted_zone_ids[:S3]['us-east-1'],
 			dns_name: 's3-website-us-east-1.amazonaws.com',
 			evaluate_target_health: true,
     )
@@ -46,7 +46,7 @@ class GhostChef::Route53
   # content for this domain name.
   def self.ensure_dns_for_cloudfront(name, distro)
     self.ensure_dns_for(name, 'CloudFront',
-			hosted_zone_id: @@hosted_zone_ids[:CloudFront][:'us-east-1'],
+			hosted_zone_id: @@hosted_zone_ids[:CloudFront]['us-east-1'],
 			dns_name: distro.domain_name,
 			evaluate_target_health: false,
     )
