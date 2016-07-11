@@ -39,6 +39,7 @@ describe GhostChef::Route53 do
   let(:hosted_zone_targets) {{
     S3: 'Z3AQBSTGFYJSTF',
     CloudFront: 'Z2FDTNDATAQYW2',
+    ELB: 'Z1111111111111',
   }}
 
   let(:crr_call) { :change_resource_record_sets }
@@ -208,6 +209,66 @@ describe GhostChef::Route53 do
         )
 
         expect(described_class.ensure_dns_for_cloudfront(name, cloudfront)).to be true
+      end
+    end
+  end
+
+  context '#ensure_dns_for_elb' do
+    let(:elb_domain) { 'cloudfront.aws.com' }
+    let(:elb) { Aws::ElasticLoadBalancing::Types::LoadBalancerDescription.new(
+      canonical_hosted_zone_name: elb_domain,
+      canonical_hosted_zone_name_id: hosted_zone_targets[:ELB],
+    ) }
+
+    context 'with no zones found' do
+      before {stub_calls(
+        [hz_call, hz_request('foo.com'), hz_response([])],
+      )}
+      it "returns false" do
+        expect(described_class.ensure_dns_for_elb('foo.com', elb)).to be false
+      end
+    end
+
+    context 'with the zone found' do
+      before {stub_calls(
+        [hz_call, hz_request('foo.com'), hz_response(['foo.com'])],
+      )}
+
+      it 'returns a record already there for a root' do
+        name = 'foo.com'
+        stub_calls(
+          [lrr_call, lrr_request(name), lrr_response([name])],
+        )
+
+        expect(described_class.ensure_dns_for_elb(name, elb)).to be true
+      end
+
+      it 'returns a record already there for a subdomain' do
+        name = 'www.foo.com'
+        stub_calls(
+          [lrr_call, lrr_request(name), lrr_response([name])],
+        )
+
+        expect(described_class.ensure_dns_for_elb(name, elb)).to be true
+      end
+
+      it 'creates a record if needed' do
+        name = 'www.foo.com'
+        stub_calls(
+          [lrr_call, lrr_request(name), lrr_response([])],
+          [
+            crr_call,
+            crr_request(
+              :ELB, name, target: {
+                dns_name: elb_domain,
+                evaluate_target_health: false,
+              },
+            ),
+            crr_response(:ELB, name),
+          ],
+        )
+
+        expect(described_class.ensure_dns_for_elb(name, elb)).to be true
       end
     end
   end

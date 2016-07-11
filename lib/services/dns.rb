@@ -52,6 +52,16 @@ class GhostChef::Route53
     )
   end
 
+  ##
+  # This method will ensure that a DNS record exists for a ELB load balancer.
+  def self.ensure_dns_for_elb(name, elb)
+    self.ensure_dns_for(name, 'ELB',
+      hosted_zone_id: elb.canonical_hosted_zone_name_id,
+      dns_name: elb.canonical_hosted_zone_name,
+			evaluate_target_health: false,
+    )
+  end
+
   private
 
   def self.ensure_dns_for(name, type, **alias_target)
