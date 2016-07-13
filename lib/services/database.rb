@@ -7,7 +7,7 @@ class GhostChef::Database
     @@client.describe_db_parameter_groups(
       db_parameter_group_name: name,
     ).db_parameter_groups.first
-  rescue Aws::RDS::Errors::DBParameterGroupNotFoundFault
+  rescue Aws::RDS::Errors::DBParameterGroupNotFound
     nil
   end
   def self.ensure_parameter_group(name, options={})
@@ -125,8 +125,8 @@ class GhostChef::Database
 
       if options[:parameter_group]
         params[:db_parameter_group_name] = options[:parameter_group].db_parameter_group_name
-      elsif options[:db_parameter_group_name]
-        params[:db_parameter_group_name] = options[:db_parameter_group_name]
+      elsif options[:parameter_group_name]
+        params[:db_parameter_group_name] = options[:parameter_group_name]
       end
 
       if options[:option_group]
