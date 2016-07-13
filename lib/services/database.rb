@@ -99,6 +99,10 @@ class GhostChef::Database
       params = {
         db_instance_identifier: name,
         db_name: options[:db_name] || name,
+        db_instance_class: options[:db_instance_class] || 'db.t1.micro',
+        engine: options[:engine],
+        engine_version: options[:engine_version],
+        auto_minor_version_upgrade: options[:auto_minor_version_upgrade] || true,
         multi_az: options[:multi_az] || false,
         publicly_accessible: options[:publicly_accessible] || false,
         allocated_storage: options[:allocated_storage] || 5,
