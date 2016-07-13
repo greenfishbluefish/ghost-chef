@@ -140,10 +140,8 @@ class GhostChef::Database
       elsif options[:subnet_group_name]
         params[:db_subnet_group_name] = options[:subnet_group_name]
       end
-      require 'pp'
-      pp params
 
-      #db = @@client.create_db_instance(params)
+      db = @@client.create_db_instance(params)
     end
     db
   end
