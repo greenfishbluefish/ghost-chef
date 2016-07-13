@@ -24,7 +24,7 @@ class GhostChef::Database
       }
       params[:tags] = tags_from_hash(options[:tags]) if options[:tags]
 
-      param_group = @@client.create_parameter_group(params).db_parameter_group
+      param_group = @@client.create_db_parameter_group(params).db_parameter_group
 
       # TODO: Wait 5 minutes for parameter group to fully materialize
     end
