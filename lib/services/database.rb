@@ -94,6 +94,8 @@ class GhostChef::Database
   def self.ensure_database(name, options={})
     db = retrieve_database(name)
     unless db
+      # We are deliberately ignoring:
+      # * db_security_groups (EC2-Classic only)
       params = {
         db_instance_identifier: name,
         db_name: options[:db_name] || name,
@@ -107,16 +109,26 @@ class GhostChef::Database
       }
       params[:tags] = tags_from_hash(options[:tags]) if options[:tags]
 
+      if options[:vpc_security_groups]
+        params[:vpc_security_group_ids] = options[:vpc_security_groups].map do |e|
+          e.group_id
+        end
+      elsif options[:vpc_security_group_ids]
+        params[:vpc_security_group_ids] = options[:vpc_security_group_ids]
+      end
+
       if options[:parameter_group]
         params[:db_parameter_group_name] = options[:parameter_group].db_parameter_group_name
       elsif options[:db_parameter_group_name]
         params[:db_parameter_group_name] = options[:db_parameter_group_name]
       end
+
       if options[:option_group]
         params[:option_group_name] = options[:option_group].option_group_name
       elsif options[:option_group_name]
         params[:option_group_name] = options[:option_group_name]
       end
+
       if options[:subnet_group]
         params[:db_subnet_group_name] = options[:subnet_group].db_subnet_group_name
       elsif options[:subnet_group_name]
