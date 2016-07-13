@@ -141,7 +141,7 @@ class GhostChef::Database
         params[:db_subnet_group_name] = options[:subnet_group_name]
       end
 
-      db = @@client.create_db_instance(params)
+      db = @@client.create_db_instance(params).db_instance
     end
     db
   end
