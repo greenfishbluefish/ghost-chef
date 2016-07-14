@@ -149,7 +149,7 @@ def retrieve_vpc(tags)
     filters: filters_from_hash(tags),
   ).vpcs[0]
 end
-def ensure_vpc(cidr_block, tags)
+def ensure_vpc(cidr_block, tags, options={})
   # Do we want to add a filter on the cidr_block as well?
   vpc = retrieve_vpc(tags)
   unless vpc
@@ -162,6 +162,14 @@ def ensure_vpc(cidr_block, tags)
       resources: [vpc.vpc_id],
       tags: tags_from_hash(tags),
     )
+
+    if options[:dns]
+      GhostChef::Clients.ec2.modify_vpc_attribute(
+        vpc_id: vpc.vpc_id,
+        enable_dns_support: { value: options[:dns][:support] || false },
+        enable_dns_hostnames: { value: options[:dns][:hostnames] || false },
+      )
+    end
 
     vpc = retrieve_vpc(tags)
   end
