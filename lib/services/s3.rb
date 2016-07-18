@@ -102,4 +102,13 @@ class GhostChef::S3
 
     true
   end
+  def self.download(name, filename, opts={})
+    @@client.get_object(
+      bucket: name,
+      key: filename,
+      response_target: opts[:output] || filename,
+    )
+
+    true
+  end
 end
